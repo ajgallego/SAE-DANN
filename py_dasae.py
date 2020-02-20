@@ -80,6 +80,8 @@ def menu():
     parser.add_argument('--show',   action='store_true', help='Show the result')
     parser.add_argument('-loadmodel', type=str,   help='Weights filename to load for test')
 
+    parser.add_argument('-gpu',    default='0',    type=str,   help='GPU')
+
     args = parser.parse_args()
 
     if args.step == -1:
