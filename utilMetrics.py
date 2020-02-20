@@ -108,7 +108,7 @@ def run_test(y_pred, y_gt, threshold=.5):
     #cv2.waitKey(0)
 
     r = utilMetrics.common_metrics(prediction, gt)
-    /*r['iou'] = utilMetrics.iou(prediction, gt)
+    """r['iou'] = utilMetrics.iou(prediction, gt)
     r['pixa'] = utilMetrics.pixel_accuracy(prediction, gt)
     r['meana'] = utilMetrics.mean_accuracy(prediction, gt)
     r['meaniu'] = utilMetrics.mean_IU(prediction, gt)
@@ -121,7 +121,7 @@ def run_test(y_pred, y_gt, threshold=.5):
             r['precision'], r['recall'], r['fm'], r['specificity'],
             r['iou'], r['pixa'], r['meana'],
             r['meaniu'], r['frwiu']
-    ])*/
+    ])"""
 
     return r
 
