@@ -24,11 +24,21 @@ util.init()
 
 K.set_image_data_format('channels_last')
 
-if K.backend() == 'tensorflow':
+"""if K.backend() == 'tensorflow':
     import tensorflow as tf    # Memory control with Tensorflow
     config = tf.compat.v1.ConfigProto()
     config.gpu_options.allow_growth=True
     sess = tf.compat.v1.Session(config=config)
+    K.set_session(sess)"""
+
+if K.backend() == 'tensorflow':
+    import tensorflow as tf    # Memory control with Tensorflow
+    session_conf = tf.ConfigProto()
+    session_conf.gpu_options.allow_growth=True
+    session_conf.intra_op_parallelism_threads = 1  # For reproducibility
+    session_conf.inter_op_parallelism_threads = 1  # For reproducibility
+    sess = tf.Session(config=session_conf, graph=tf.get_default_graph())
+    #sess = tf.Session(config=session_conf)
     K.set_session(sess)
 
 
