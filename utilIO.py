@@ -16,11 +16,11 @@ def load_array_of_files(basepath, folders):
         for fname_x in array_of_files:
             X.append(fname_x)
 
-            if len(X) >= 4:              # TODO REMOVE!
-                break
+            #if len(X) >= 4:              # TODO REMOVE!
+            #    break
 
-        if len(X) >= 4:              # TODO REMOVE!
-                break
+        #if len(X) >= 4:              # TODO REMOVE!
+        #        break
 
     return np.asarray(X)
 

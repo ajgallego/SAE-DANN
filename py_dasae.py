@@ -81,10 +81,10 @@ def menu():
 
 
 # ----------------------------------------------------------------------------
-def save_images(autoencoder, args, test_folds):
-    assert(args.threshold != -1)
+def save_images(autoencoder, config, test_folds):
+    assert(config.threshold != -1)
 
-    array_files = utilIO.load_array_of_files(args.path, test_folds)
+    array_files = utilIO.load_array_of_files(config.path, test_folds)
 
     for fname in array_files:
         print('Processing image', fname)
@@ -94,9 +94,9 @@ def save_images(autoencoder, args, test_folds):
 
         rows = img.shape[0]
         cols = img.shape[1]
-        if img.shape[0] < args.window or img.shape[1] < args.window:
-            new_rows = args.window if img.shape[0] < args.window else img.shape[0]
-            new_cols = args.window if img.shape[1] < args.window else img.shape[1]
+        if img.shape[0] < config.window or img.shape[1] < config.window:
+            new_rows = config.window if img.shape[0] < config.window else img.shape[0]
+            new_cols = config.window if img.shape[1] < config.window else img.shape[1]
             img = cv2.resize(img, (new_cols, new_rows), interpolation = cv2.INTER_CUBIC)
 
         img = np.asarray(img).astype('float32')
@@ -104,18 +104,18 @@ def save_images(autoencoder, args, test_folds):
 
         finalImg = np.zeros(img.shape, dtype=bool)
 
-        for (x, y, window) in utilDataGenerator.sliding_window(img, stepSize=args.step, windowSize=(args.window, args.window)):
-            if window.shape[0] != args.window or window.shape[1] != args.window:
+        for (x, y, window) in utilDataGenerator.sliding_window(img, stepSize=config.step, windowSize=(config.window, config.window)):
+            if window.shape[0] != config.window or window.shape[1] != config.window:
                 continue
 
-            roi = img[y:(y + args.window), x:(x + args.window)].copy()
-            roi = roi.reshape(1, args.window, args.window, 1)
+            roi = img[y:(y + config.window), x:(x + config.window)].copy()
+            roi = roi.reshape(1, config.window, config.window, 1)
             roi = roi.astype('float32') #/ 255.
 
             prediction = autoencoder.predict(roi)
-            prediction = (prediction > args.threshold)
+            prediction = (prediction > config.threshold)
 
-            finalImg[y:(y + args.window), x:(x + args.window)] = prediction[0].reshape(args.window, args.window)
+            finalImg[y:(y + config.window), x:(x + config.window)] = prediction[0].reshape(config.window, config.window)
 
         finalImg = 1 - finalImg
         finalImg *= 255
@@ -125,7 +125,7 @@ def save_images(autoencoder, args, test_folds):
         if finalImg.shape[0] != rows or finalImg.shape[1] != cols:
             finalImg = cv2.resize(finalImg, (cols, rows), interpolation = cv2.INTER_CUBIC)
 
-        outFilename = fname.replace('_GR/', '_PR-' + args.modelpath + '/')
+        outFilename = fname.replace('_GR/', '_PR-' + config.modelpath + '/')
 
         util.mkdirp( os.path.dirname(outFilename) )
 
@@ -193,6 +193,14 @@ def train_dann(datasets, input_shape, weights_foldername, config):
     gc.collect()
 
 
+    # Save output images
+
+    config.modelpath = weights_filename
+    config.threshold = best_th
+    save_images(autoencoder, config, test_folds)
+
+
+
 
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
@@ -230,6 +238,7 @@ if __name__ == "__main__":
     train_dann(datasets, input_shape, WEIGHTS_DANN_FOLDERNAME, config)
 
 
+
     """
     nb_layers = 5
     autoencoder, encoder, decoder = utilModelREDNet.build_REDNet(nb_layers,
@@ -250,7 +259,7 @@ if __name__ == "__main__":
         print('Loading test weights from', weights_filename )
         autoencoder.load_weights( weights_filename )
 
-    if aconfigrgs.test == False:
+    if config.test == False:
         config.monitor='min'
         best_th = utilFit.batch_fit_with_data_generator(autoencoder,
                         train_data_generator, x_test, y_test, config, weights_filename)
@@ -259,9 +268,4 @@ if __name__ == "__main__":
         autoencoder.load_weights( weights_filename )
 
 
-    # Save output images
-
-    config.modelpath = weights_filename
-    config.threshold = best_th
-    save_images(autoencoder, config, test_folds)
     """
