@@ -180,9 +180,7 @@ def load_data(path, db, window, step, page_size, is_test, truncate):
 
 
 # -----------------------------------------------------------------------------
-def train_dann(datasets, input_shape, weights_foldername, config):
-    print('Train SAE DANN...')
-
+def run_dann(datasets, input_shape, weights_foldername, config):
     summary = True
     dann = utilDANNModel.DANNModel(input_shape, config, summary)
 
@@ -191,6 +189,7 @@ def train_dann(datasets, input_shape, weights_foldername, config):
                                                                                                         datasets['target']['name'], config)
 
     if config.test == False:
+        print('Train SAE DANN...')
         utilDANN.train_dann(dann, datasets['source'], datasets['target'],
                                                     config.page, config.nb_super_epoch,
                                                     config.epochs, config.batch, weights_filename)
@@ -204,9 +203,9 @@ def train_dann(datasets, input_shape, weights_foldername, config):
     pred_source = dann.label_model.predict(datasets['source']['x_test'], batch_size=32, verbose=0)
     pred_target = dann.label_model.predict(datasets['target']['x_test'], batch_size=32, verbose=0)
     print('SOURCE:')
-    calculate_best_fm(pred_source, datasets['source']['y_test'])
+    utilMetrics.calculate_best_fm(pred_source, datasets['source']['y_test'])
     print('TARGET:')
-    calculate_best_fm(pred_target, datasets['target']['y_test'])
+    utilMetrics.calculate_best_fm(pred_target, datasets['target']['y_test'])
 
 
     # Save output images
@@ -251,6 +250,6 @@ if __name__ == "__main__":
     print(' - Input shape:', input_shape)
 
 
-    train_dann(datasets, input_shape, WEIGHTS_DANN_FOLDERNAME, config)
+    run_dann(datasets, input_shape, WEIGHTS_DANN_FOLDERNAME, config)
 
 
