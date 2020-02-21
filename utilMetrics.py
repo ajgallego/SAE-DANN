@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 import numpy as np
 from sklearn.metrics import f1_score, precision_score, recall_score
+import util
 
-
+"""
 # -----------------------------------------------------------------------------
 def macroFScore(binarized_imgs, labels_target):
     return f1_score(y_pred=binarized_imgs, y_true=labels_target, average='macro')
@@ -41,7 +43,7 @@ def calculate_f1(pred, labels):
     recall = macroRecall(pred_1D, labels_1D)
 
     return precision, recall, f1
-
+"""
 
 # ----------------------------------------------------------------------------
 def __run_validations(pred, gt):
@@ -57,7 +59,7 @@ def __run_validations(pred, gt):
 
 
 # ----------------------------------------------------------------------------
-def common_metrics(prediction, gt):
+def __calculate_metrics(prediction, gt):
     __run_validations(prediction, gt)
 
     not_prediction = np.logical_not(prediction)
@@ -107,26 +109,19 @@ def run_test(y_pred, y_gt, threshold=.5):
     #cv2.imshow("prediction", prediction[0].astype(np.uint8)*255)
     #cv2.waitKey(0)
 
-    r = utilMetrics.common_metrics(prediction, gt)
-    """r['iou'] = utilMetrics.iou(prediction, gt)
-    r['pixa'] = utilMetrics.pixel_accuracy(prediction, gt)
-    r['meana'] = utilMetrics.mean_accuracy(prediction, gt)
-    r['meaniu'] = utilMetrics.mean_IU(prediction, gt)
-    r['frwiu'] = utilMetrics.frequency_weighted_IU(prediction, gt)
+    r = __calculate_metrics(prediction, gt)
 
-    print('TP\tTN\tFP\tFN\tError\tAcc\tPrec\tRecall\tFm\tSpecif.\tIoU\tPixA\tMeanA\tMeanIU\tFrWIU')
+    print('TP\tTN\tFP\tFN\tError\tAcc\tPrec\tRecall\tFm\tSpecif.')
     util.print_tabulated([
             r['tp'], r['tn'], r['fp'], r['fn'],
             r['error'], r['accuracy'],
-            r['precision'], r['recall'], r['fm'], r['specificity'],
-            r['iou'], r['pixa'], r['meana'],
-            r['meaniu'], r['frwiu']
-    ])"""
+            r['precision'], r['recall'], r['fm'], r['specificity']
+    ])
 
     return r
 
 #------------------------------------------------------------------------------
-def calculate_best_fm(args_th, y_pred, y_test):
+def calculate_best_fm(y_pred, y_test, args_th=-1):
     best_fm = -1
     best_th = -1
     if args_th == -1:

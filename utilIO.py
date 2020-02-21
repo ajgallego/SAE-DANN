@@ -7,7 +7,7 @@ ARRAY_DBS =['dibco2016','dibco2014','palm0','palm1','phi','ein','sal','voy','bdi
 
 
 # -----------------------------------------------------------------------------
-def load_array_of_files(basepath, folders):
+def load_array_of_files(basepath, folders, truncate=False):
     X = []
     for folder in folders:
         full_path = os.path.join(basepath, folder)
@@ -16,11 +16,8 @@ def load_array_of_files(basepath, folders):
         for fname_x in array_of_files:
             X.append(fname_x)
 
-            #if len(X) >= 4:              # TODO REMOVE!
-            #    break
-
-        #if len(X) >= 4:              # TODO REMOVE!
-        #        break
+    if truncate:
+        X = X[:10]
 
     return np.asarray(X)
 

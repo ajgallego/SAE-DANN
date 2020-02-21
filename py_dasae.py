@@ -35,8 +35,8 @@ if K.backend() == 'tensorflow':
     import tensorflow as tf    # Memory control with Tensorflow
     session_conf = tf.ConfigProto()
     session_conf.gpu_options.allow_growth=True
-    session_conf.intra_op_parallelism_threads = 1  # For reproducibility
-    session_conf.inter_op_parallelism_threads = 1  # For reproducibility
+    #session_conf.intra_op_parallelism_threads = 1  # For reproducibility
+    #session_conf.inter_op_parallelism_threads = 1  # For reproducibility
     sess = tf.Session(config=session_conf, graph=tf.get_default_graph())
     #sess = tf.Session(config=session_conf)
     K.set_session(sess)
@@ -76,6 +76,7 @@ def menu():
     parser.add_argument('-b',           default=10,     dest='batch',               type=int,   help='batch size')
     parser.add_argument('-verbose',     default=1,                                  type=int,   help='1=show batch increment, other=mute')
 
+    parser.add_argument('--truncate',   action='store_true', help='Truncate data')
     parser.add_argument('--test',   action='store_true', help='Only run test')
     parser.add_argument('--show',   action='store_true', help='Show the result')
     parser.add_argument('-loadmodel', type=str,   help='Weights filename to load for test')
@@ -93,8 +94,10 @@ def menu():
 
 
 # ----------------------------------------------------------------------------
-def save_images(autoencoder, config, test_folds):
-    assert(config.threshold != -1)
+def save_images(model, config):
+    assert config.threshold != -1
+
+    _, test_folds = utilIO.load_folds_names(config.db2)
 
     array_files = utilIO.load_array_of_files(config.path, test_folds)
 
@@ -145,7 +148,7 @@ def save_images(autoencoder, config, test_folds):
 
 
 # ----------------------------------------------------------------------------
-def load_data(path, db, window, step, page_size, is_test = False):
+def load_data(path, db, window, step, page_size, is_test, truncate):
     print('Loading data...')
     train_folds, test_folds = utilIO.load_folds_names(db)
 
@@ -155,11 +158,12 @@ def load_data(path, db, window, step, page_size, is_test = False):
         for f in list(train_folds):
             train_folds.append( util.rreplace(f, "/", "/aug_", 1) )"""
 
-    array_test_files = utilIO.load_array_of_files(path, test_folds)
+    array_test_files = utilIO.load_array_of_files(path, test_folds, truncate)
     x_test, y_test = utilDataGenerator.generate_chunks(array_test_files, x_sufix, y_sufix, window, window)
 
+    train_data_generator = None
     if is_test == False:
-        array_train_files = utilIO.load_array_of_files(path, train_folds)
+        array_train_files = utilIO.load_array_of_files(path, train_folds, truncate)
         train_data_generator = utilDataGenerator.LazyChunkGenerator(array_train_files, x_sufix, y_sufix, page_size, window, step)
         train_data_generator.shuffle()
         """if config.start_from > 0:
@@ -199,17 +203,17 @@ def train_dann(datasets, input_shape, weights_foldername, config):
 
     pred_source = dann.label_model.predict(datasets['source']['x_test'], batch_size=32, verbose=0)
     pred_target = dann.label_model.predict(datasets['target']['x_test'], batch_size=32, verbose=0)
-    precision, recall, f1 = utilMetrics.calculate_f1(pred_source, datasets['source']['y_test'])
-    precision, recall, f1 = utilMetrics.calculate_f1(pred_target, datasets['target']['y_test'])
-
-    gc.collect()
+    print('SOURCE:')
+    calculate_best_fm(pred_source, datasets['source']['y_test'])
+    print('TARGET:')
+    calculate_best_fm(pred_target, datasets['target']['y_test'])
 
 
     # Save output images
 
-    config.modelpath = weights_filename
-    config.threshold = best_th
-    save_images(autoencoder, config, test_folds)
+    #config.modelpath = weights_filename
+    #config.threshold = best_th
+    save_images(dann.label_model, config)
 
 
 
@@ -220,8 +224,8 @@ def train_dann(datasets, input_shape, weights_foldername, config):
 if __name__ == "__main__":
     config = menu()
 
-    source_data = load_data(config.path, config.db1, config.window, config.step, config.page, config.test)
-    target_data = load_data(config.path, config.db2, config.window, config.step, config.page, config.test)
+    source_data = load_data(config.path, config.db1, config.window, config.step, config.page, config.test, config.truncate)
+    target_data = load_data(config.path, config.db2, config.window, config.step, config.page, config.test, config.truncate)
     datasets = {'source': source_data, 'target': target_data}
 
     print('SOURCE: {} \ttrain_generator:{}\tx_test:{}\ty_test:{}'.format(
@@ -235,49 +239,18 @@ if __name__ == "__main__":
         datasets['target']['x_test'].shape,
         datasets['target']['y_test'].shape))
 
-    assert len(datasets['source']['generator']) > 0
+    assert config.test == True or len(datasets['source']['generator']) > 0
     assert len(datasets['source']['x_test']) > 0
     assert len(datasets['source']['x_test']) == len(datasets['source']['y_test'])
-    assert len(datasets['target']['generator']) > 0
+    assert config.test == True or len(datasets['target']['generator']) > 0
     assert len(datasets['target']['x_test']) > 0
     assert len(datasets['target']['x_test']) == len(datasets['target']['y_test'])
 
     input_shape = datasets['source']['x_test'].shape[1:]
     assert input_shape == datasets['target']['x_test'].shape[1:]
-    print('# Input shape:', input_shape)
+    print(' - Input shape:', input_shape)
 
 
     train_dann(datasets, input_shape, WEIGHTS_DANN_FOLDERNAME, config)
 
 
-
-    """
-    nb_layers = 5
-    autoencoder, encoder, decoder = utilModelREDNet.build_REDNet(nb_layers,
-                                            config.window, config.nb_filters,
-                                            config.k_size, config.dropout,
-                                            config.stride, config.every)
-
-    autoencoder.compile(optimizer='adam', loss=util.micro_fm, metrics=['mse'])
-    print(autoencoder.summary())
-
-
-    best_th = config.threshold
-
-    if config.loadmodel != None:
-        print('Loading initial weights from', config.loadmodel )
-        autoencoder.load_weights( config.loadmodel )
-    elif config.test == True:
-        print('Loading test weights from', weights_filename )
-        autoencoder.load_weights( weights_filename )
-
-    if config.test == False:
-        config.monitor='min'
-        best_th = utilFit.batch_fit_with_data_generator(autoencoder,
-                        train_data_generator, x_test, y_test, config, weights_filename)
-
-        # Re-Load last weights
-        autoencoder.load_weights( weights_filename )
-
-
-    """

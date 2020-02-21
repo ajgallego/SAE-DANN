@@ -126,6 +126,9 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, target_x_tra
         #print("Epoch [{}/{}]: source label loss={:.4f}, mse={:.4f}, f1={:.4f} | domain loss={:.4f}, acc={:.4f} | target label loss={:.4f}, mse={:.4f}, f1={:.4f} | {}".format(
         #                    e+1, nb_epochs, label_loss, label_mse, source_f1, domain_loss, domain_acc, target_loss, target_mse, target_f1, saved))
 
+        y_pred = dann_builder.label_model.predict(target_x_test, batch_size=32, verbose=0)
+        best_fm, best_th = utilMetrics.calculate_best_fm(y_pred, target_y_test)
+
         gc.collect()
 
 

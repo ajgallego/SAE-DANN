@@ -26,6 +26,14 @@ def pause():
 
 
 # ----------------------------------------------------------------------------
+def print_tabulated(list):
+    print('\t'.join('%.4f'%x if type(x) is float or type(x) is np.float64 \
+                        else '%d'%x if type(x) is int \
+                            else str(x) \
+                                for x in list))
+
+
+# ----------------------------------------------------------------------------
 def mkdirp(directory):
     if not os.path.isdir(directory):
         os.makedirs(directory)
