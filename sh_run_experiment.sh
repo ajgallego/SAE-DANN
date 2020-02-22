@@ -1,5 +1,7 @@
 #!/bin/bash
 
+python -u py_dasae.py -path datasets -db1 sal -db2 dibco2016 -s 128 -l 5 -f 128 -gpu 0
+
 python -u py_dasae.py -path datasets -db1 dibco2016 -db2 palm0
 
 exit
@@ -7,23 +9,27 @@ exit
 
 gpu=0
 
-model=1              # 1 2 3
-db=mnist            # mnist  signs  mensural officehome
-select=None     # 'mnist', 'mnist_m', 'svhn', 'syn_numbers'   |||   'gtsrb', 'syn_signs'
-norm=255            # 255 mean standard
+source=sal            				# 'dibco2016','dibco2014','palm0','palm1','phi','ein','sal','voy','bdi','all'
+target=dibco2016     		#
+window=256
+step=120
+layers=5
+filters=128
+kernel=5
 e=300
-#ei=25
-b=128   # 64 128 256
-#lda=0.5
-#lr1=0.5				  # 0.5  1.0
-#lr2=1.0
-#iopt=prob  			# prob', 'diff', 'knn', 'mode'
+b=128   									# 64 128 256
+page=-1
+lda=0.001
+#lr=0.5				  # 0.5  1.0
 
-# -iopt ${iopt} -ei ${ei} -lda ${lda} -lr1 ${lr1} -lr2 ${lr2}
+python -u py_dasae.py -path datasets -db1 ${source} -db2 ${target} \
+				-w ${window} -s ${step} \
+				-l ${layers} -f ${filters} -k ${kernel} \
+				-lda ${lda} \
+				-e ${e} -b ${b} -page ${page} \
+				-gpu ${gpu} \
+				> out_DANN_${source}-${target}_w${window}_s${step}_l${layers}_f${filters}_k${kernel}_lda${lda}_e${e}_b${b}_page${page}.txt
 
-python -u py_dann_incr.py -type dann  -model ${model} -db ${db} -select ${select} \
-				-norm ${norm} -e ${e} -b ${b} -fold -1 -gpu $gpu \
-                > out_DANN2_model_${model}_${db}_select_${select}_norm_${norm}_e${e}_b${b}.txt
 
 exit
 

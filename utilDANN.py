@@ -15,12 +15,11 @@ import utilMetrics
 
 # ----------------------------------------------------------------------------
 def get_dann_weights_filename(folder, from_dataset, to_dataset, config):
-    #weights = 'MODELS/model_dann_from_{}_to_{}_best_label.h5'.format(datasets[i]['name'], datasets[j]['name'])
-    return '{}/weights_dann_model_from_{}_to_{}_e{}_b{}.npy'.format(
+    return '{}/weights_dann_model_from_{}_to_{}_e{}_b{}_lda{}.npy'.format(
                             folder,
                             #('/truncated' if config.truncate else ''),
                             from_dataset, to_dataset,
-                            str(config.epochs), str(config.batch))
+                            str(config.epochs), str(config.batch), str(config.lda))
 
     """return "{}_{}_{}x{}_s{}{}{}_f{}_k{}{}_se{}_e{}_b{}_es{}".format(
                                 config.db, config.dbp,
@@ -79,9 +78,9 @@ def train_dann_batch(dann_model, src_generator, target_genenerator, target_x_tra
 
 
 # ----------------------------------------------------------------------------
-def __train_dann_page(dann_builder, source_x_train, source_y_train, target_x_train, target_y_train,
-                                                nb_epochs, batch_size, weights_filename,
-                                                target_x_test = None, target_y_test = None):
+def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_test, source_y_test,
+                                                 target_x_train, target_y_train, target_x_test, target_y_test,
+                                                nb_epochs, batch_size, weights_filename):
     best_label_mse = 0
     target_genenerator = batch_generator(target_x_train, None, batch_size=batch_size // 2)
 
@@ -98,8 +97,8 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, target_x_tra
         loss, domain_loss, label_loss, domain_acc, label_mse = train_dann_batch(
                                             dann_builder.dann_model, src_generator, target_genenerator, target_x_train, batch_size )
 
-        #source_prediction = dann_builder.label_model.predict(source_x_train, batch_size=32, verbose=0)
-        #source_precision, source_recall, source_f1 = utilMetrics.calculate_f1(source_prediction, source_y_train)
+        source_prediction = dann_builder.label_model.predict(source_x_train, batch_size=32, verbose=0)
+        source_f1, source_th = utilMetrics.calculate_best_fm(source_prediction, source_y_train)
 
         saved = ""
         if best_label_mse <= label_mse:
@@ -107,27 +106,17 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, target_x_tra
             dann_builder.save(weights_filename)
             saved = "SAVED"
 
-        if target_genenerator is not None:
-            if target_x_test is not None:
-                target_loss, target_mse = dann_builder.label_model.evaluate(target_x_test, target_y_test, batch_size=32, verbose=0)
-                #target_prediction = dann_builder.label_model.predict(target_x_test, batch_size=32, verbose=0)
-                #target_precision, target_recall, target_f1 = utilMetrics.calculate_f1(target_prediction, target_y_test)
-            else:
-                target_loss, target_mse = dann_builder.label_model.evaluate(target_x_train, target_y_train, batch_size=32, verbose=0)
-                #target_prediction = dann_builder.label_model.predict(target_x_train, batch_size=32, verbose=0)
-                #target_precision, target_recall, target_f1 = utilMetrics.calculate_f1(target_prediction, target_y_train)
-        else:
-            domain_loss, domain_acc = -1, -1, -1
-            target_loss, target_mse = -1, -1, -1
-            target_precision, target_recall, target_f1  = -1, -1, -1
-
-        print("Epoch [{}/{}]: source label loss={:.4f}, mse={:.4f} | domain loss={:.4f}, acc={:.4f} | target label loss={:.4f}, mse={:.4f} | {}".format(
-                            e+1, nb_epochs, label_loss, label_mse, domain_loss, domain_acc, target_loss, target_mse, saved))
-        #print("Epoch [{}/{}]: source label loss={:.4f}, mse={:.4f}, f1={:.4f} | domain loss={:.4f}, acc={:.4f} | target label loss={:.4f}, mse={:.4f}, f1={:.4f} | {}".format(
-        #                    e+1, nb_epochs, label_loss, label_mse, source_f1, domain_loss, domain_acc, target_loss, target_mse, target_f1, saved))
+        #target_loss, target_mse = dann_builder.label_model.evaluate(target_x_train, target_y_train, batch_size=32, verbose=0)
+        target_loss, target_mse = dann_builder.label_model.evaluate(target_x_test, target_y_test, batch_size=32, verbose=0)
 
         y_pred = dann_builder.label_model.predict(target_x_test, batch_size=32, verbose=0)
-        best_fm, best_th = utilMetrics.calculate_best_fm(y_pred, target_y_test)
+        target_f1, target_th = utilMetrics.calculate_best_fm(y_pred, target_y_test)
+
+        #print("Epoch [{}/{}]: source label loss={:.4f}, mse={:.4f} | domain loss={:.4f}, acc={:.4f} | target label loss={:.4f}, mse={:.4f} | {}".format(
+        #                    e+1, nb_epochs, label_loss, label_mse, domain_loss, domain_acc, target_loss, target_mse, saved))
+        print("Epoch [{}/{}]: source label loss={:.4f}, mse={:.4f}, f1={:.4f} | domain loss={:.4f}, acc={:.4f} | target label loss={:.4f}, mse={:.4f}, f1={:.4f} | {}".format(
+                            e+1, nb_epochs, label_loss, label_mse, source_f1, domain_loss, domain_acc, target_loss, target_mse, target_f1, saved))
+
 
         gc.collect()
 
@@ -160,8 +149,7 @@ def train_dann(dann_builder, source, target, page, nb_super_epoch, nb_epochs,
             #print(source_y_train.shape)
             #print(target_x_train.shape)
 
-            __train_dann_page(dann_builder, source_x_train, source_y_train,
-                                                    target_x_train, target_y_train,
-                                                    nb_epochs, batch_size, weights_filename,
-                                                    target['x_test'], target['y_test'])
+            __train_dann_page(dann_builder, source_x_train, source_y_train, source['x_test'], source['y_test'],
+                                                    target_x_train, target_y_train, target['x_test'], target['y_test'],
+                                                    nb_epochs, batch_size, weights_filename)
 

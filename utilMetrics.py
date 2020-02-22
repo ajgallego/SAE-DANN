@@ -4,46 +4,6 @@ import numpy as np
 from sklearn.metrics import f1_score, precision_score, recall_score
 import util
 
-"""
-# -----------------------------------------------------------------------------
-def macroFScore(binarized_imgs, labels_target):
-    return f1_score(y_pred=binarized_imgs, y_true=labels_target, average='macro')
-
-
-# -----------------------------------------------------------------------------
-def macroPrecision(binarized_imgs, labels_target):
-    return precision_score(y_pred=binarized_imgs, y_true=labels_target, average='macro')
-
-
-# -----------------------------------------------------------------------------
-def macroRecall(binarized_imgs, labels_target):
-    return recall_score(y_pred=binarized_imgs, y_true=labels_target, average='macro')
-
-
-# -----------------------------------------------------------------------------
-def __prepare_imgs_to_sklearn(binarized_imgs_cat, labels_target_cat):
-    binarized_imgs_2D = np.argmax(binarized_imgs_cat, axis=3)
-    labels_target_2D = np.argmax(labels_target_cat, axis=3)
-
-    num_pixels = np.ma.size(binarized_imgs_2D)
-    assert(num_pixels == np.ma.size(labels_target_2D))
-
-    binarized_imgs_1D = binarized_imgs_2D.ravel()
-    labels_target_1D = labels_target_2D.ravel()
-
-    return binarized_imgs_1D, labels_target_1D
-
-
-# -----------------------------------------------------------------------------
-def calculate_f1(pred, labels):
-    pred_1D, labels_1D = __prepare_imgs_to_sklearn(pred, labels)
-
-    f1 = macroFScore(pred_1D, labels_1D)
-    precision = macroPrecision(pred_1D, labels_1D)
-    recall = macroRecall(pred_1D, labels_1D)
-
-    return precision, recall, f1
-"""
 
 # ----------------------------------------------------------------------------
 def __run_validations(pred, gt):
@@ -111,12 +71,12 @@ def run_test(y_pred, y_gt, threshold=.5):
 
     r = __calculate_metrics(prediction, gt)
 
-    print('TP\tTN\tFP\tFN\tError\tAcc\tPrec\tRecall\tFm\tSpecif.')
+    """print('TP\tTN\tFP\tFN\tError\tAcc\tPrec\tRecall\tFm\tSpecif.')
     util.print_tabulated([
             r['tp'], r['tn'], r['fp'], r['fn'],
             r['error'], r['accuracy'],
             r['precision'], r['recall'], r['fm'], r['specificity']
-    ])
+    ])"""
 
     return r
 
@@ -143,3 +103,44 @@ def calculate_best_fm(y_pred, y_test, args_th=-1):
 
     return best_fm, best_th
 
+
+"""
+# -----------------------------------------------------------------------------
+def macroFScore(binarized_imgs, labels_target):
+    return f1_score(y_pred=binarized_imgs, y_true=labels_target, average='macro')
+
+
+# -----------------------------------------------------------------------------
+def macroPrecision(binarized_imgs, labels_target):
+    return precision_score(y_pred=binarized_imgs, y_true=labels_target, average='macro')
+
+
+# -----------------------------------------------------------------------------
+def macroRecall(binarized_imgs, labels_target):
+    return recall_score(y_pred=binarized_imgs, y_true=labels_target, average='macro')
+
+
+# -----------------------------------------------------------------------------
+def __prepare_imgs_to_sklearn(binarized_imgs_cat, labels_target_cat):
+    binarized_imgs_2D = np.argmax(binarized_imgs_cat, axis=3)
+    labels_target_2D = np.argmax(labels_target_cat, axis=3)
+
+    num_pixels = np.ma.size(binarized_imgs_2D)
+    assert(num_pixels == np.ma.size(labels_target_2D))
+
+    binarized_imgs_1D = binarized_imgs_2D.ravel()
+    labels_target_1D = labels_target_2D.ravel()
+
+    return binarized_imgs_1D, labels_target_1D
+
+
+# -----------------------------------------------------------------------------
+def calculate_f1(pred, labels):
+    pred_1D, labels_1D = __prepare_imgs_to_sklearn(pred, labels)
+
+    f1 = macroFScore(pred_1D, labels_1D)
+    precision = macroPrecision(pred_1D, labels_1D)
+    recall = macroRecall(pred_1D, labels_1D)
+
+    return precision, recall, f1
+"""

@@ -69,6 +69,7 @@ def menu():
     parser.add_argument('-k',          default=5,        dest='k_size',            type=int,   help='kernel size')
     parser.add_argument('-drop',   default=0,        dest='dropout',          type=float, help='dropout value')
 
+    parser.add_argument('-lda',      default=0.001,    type=float,    help='Reversal gradient lambda')
     parser.add_argument('-page',   default=-1,      type=int,   help='Page size to divide the training set. -1 to load all')
     parser.add_argument('-super',  default=1,      dest='nb_super_epoch',      type=int,   help='nb_super_epoch')
     parser.add_argument('-th',         default=-1,     dest='threshold',           type=float, help='threshold. -1 to test from 0 to 1')
@@ -192,7 +193,8 @@ def run_dann(datasets, input_shape, weights_foldername, config):
         print('Train SAE DANN...')
         utilDANN.train_dann(dann, datasets['source'], datasets['target'],
                                                     config.page, config.nb_super_epoch,
-                                                    config.epochs, config.batch, weights_filename)
+                                                    config.epochs, config.batch, weights_filename,
+                                                    config.lda)
 
     print('# Evaluate...')
     dann.load( weights_filename )  # Load the last save weights...
