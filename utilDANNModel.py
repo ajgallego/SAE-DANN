@@ -40,8 +40,11 @@ class DANNModel(object):
 
     # -------------------------------------------------------------------------
     def __compile(self):
+        #### NEW MODEL ####
+        # self.dann_model.compile(loss={'classifier_output': 'binary_crossentropy',
+        #                                                                    'domain_output': 'binary_crossentropy'},  ###
         self.dann_model.compile(loss={'classifier_output': 'binary_crossentropy',
-                                                                            'domain_output': 'categorical_crossentropy'},
+                                                                            'domain_output': 'binary_crossentropy'},
                                                                loss_weights={'classifier_output': 0.5, 'domain_output': 1.0},
                                                                optimizer=self.opt,
                                                                metrics={'classifier_output': 'mse',

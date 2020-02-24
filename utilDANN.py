@@ -15,7 +15,9 @@ import utilMetrics
 
 # ----------------------------------------------------------------------------
 def get_dann_weights_filename(folder, from_dataset, to_dataset, config):
-    return '{}/weights_dann_model_from_{}_to_{}_e{}_b{}_lda{}.npy'.format(
+    #### NEW MODEL ####
+    #return '{}/weights_dann_model_from_{}_to_{}_e{}_b{}_lda{}.npy'.format(
+    return '{}/weights_dannCONV_model_from_{}_to_{}_e{}_b{}_lda{}.npy'.format(
                             folder,
                             #('/truncated' if config.truncate else ''),
                             from_dataset, to_dataset,
@@ -54,6 +56,16 @@ def batch_generator(x_data, y_data=None, batch_size=1, shuffle_data=True):
 
 # ----------------------------------------------------------------------------
 def train_dann_batch(dann_model, src_generator, target_genenerator, target_x_train, batch_size):
+    #### NEW MODEL ####
+    #domain0 = np.zeros(target_x_train.shape[1:], dtype=int)
+    #domain1 = np.ones(target_x_train.shape[1:], dtype=int)
+    batchYd = np.concatenate(( np.zeros((batch_size // 2,) + target_x_train.shape[1:], dtype=int),
+                                                              np.ones((batch_size // 2,) + target_x_train.shape[1:], dtype=int)) )
+    #   np.tile(domain0, [batch_size // 2, 1, 1, 1]),
+    #                                                       np.tile(domain1, [batch_size // 2, 1, 1, 1])))
+    #print(batchYd)
+    #print(batchYd.shape)
+
     for batchXs, batchYs in src_generator:
         try:
             batchXd = next(target_genenerator)
@@ -64,8 +76,10 @@ def train_dann_batch(dann_model, src_generator, target_genenerator, target_x_tra
         # Combine the labeled and unlabeled data along with the discriminative results
         combined_batchX = np.concatenate((batchXs, batchXd))
         batch2Ys = np.concatenate((batchYs, batchYs))
-        batchYd = np.concatenate((np.tile([0, 1], [batch_size // 2, 1]),
-                                                                    np.tile([1, 0], [batch_size // 2, 1])))
+
+        #### NEW MODEL ####
+        #batchYd = np.concatenate((np.tile([0, 1], [batch_size // 2, 1]),
+        #                                                            np.tile([1, 0], [batch_size // 2, 1])))
         #print(combined_batchX.shape, batch2Ys.shape, batchYd.shape)
 
         result = dann_model.train_on_batch(combined_batchX,

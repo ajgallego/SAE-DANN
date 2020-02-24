@@ -87,7 +87,7 @@ def calculate_best_fm(y_pred, y_test, args_th=-1):
     if args_th == -1:
         for i in range(11):
             th = float(i) / 10.0
-            print('Threshold:', th)
+            #print('Threshold:', th)
             results = run_test(y_pred, y_test, threshold=th)
             fm = results['fm']
             if fm > best_fm:

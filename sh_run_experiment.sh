@@ -1,11 +1,8 @@
 #!/bin/bash
 
-python -u py_dasae.py -path datasets -db1 sal -db2 dibco2016 -s 128 -l 5 -f 128 -gpu 0
-
-python -u py_dasae.py -path datasets -db1 dibco2016 -db2 palm0
-
-exit
-
+#python -u py_dasae.py -path datasets -db1 sal -db2 dibco2016 -s 128 -l 5 -f 128 -gpu 0
+#python -u py_dasae.py -path datasets -db1 dibco2016 -db2 palm0
+#exit
 
 gpu=0
 
@@ -17,10 +14,11 @@ layers=5
 filters=128
 kernel=5
 e=300
-b=128   									# 64 128 256
+b=12   									# 64 128 256
 page=-1
 lda=0.001
 #lr=0.5				  # 0.5  1.0
+options=		#--truncate
 
 python -u py_dasae.py -path datasets -db1 ${source} -db2 ${target} \
 				-w ${window} -s ${step} \
@@ -28,6 +26,7 @@ python -u py_dasae.py -path datasets -db1 ${source} -db2 ${target} \
 				-lda ${lda} \
 				-e ${e} -b ${b} -page ${page} \
 				-gpu ${gpu} \
+				${options}
 				> out_DANN_${source}-${target}_w${window}_s${step}_l${layers}_f${filters}_k${kernel}_lda${lda}_e${e}_b${b}_page${page}.txt
 
 
