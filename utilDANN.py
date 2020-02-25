@@ -105,7 +105,7 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
         lr = float(K.get_value(dann_builder.opt.lr))* (1. / (1. + float(K.get_value(dann_builder.opt.decay)) * float(K.get_value(dann_builder.opt.iterations)) ))
         print(' - Lr:', lr, ' / Lambda:', dann_builder.grl_layer.get_hp_lambda())
 
-        dann_builder.grl_layer.increment_hp_lambda_by(1e-4)
+        dann_builder.grl_layer.increment_hp_lambda_by(1e-6)      #1e-4)
 
         # Train batch
         loss, domain_loss, label_loss, domain_acc, label_mse = train_dann_batch(
@@ -115,7 +115,7 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
         source_f1, source_th = utilMetrics.calculate_best_fm(source_prediction, source_y_train)
 
         saved = ""
-        if best_label_mse <= label_mse:
+        if label_mse <= best_label_mse:
             best_label_mse = label_mse
             dann_builder.save(weights_filename)
             saved = "SAVED"

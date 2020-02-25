@@ -106,7 +106,7 @@ class ModelSAE(AbstractModel):
         """
         #### NEW MODEL ####
         back = self.config.nb_filters
-        self.config.nb_filters = int(back / 2)
+        self.config.nb_filters = int(back / 4)
         x = input
         for i in xrange(self.config.nb_layers):
             x = self.__create_layer_conv(x, True)

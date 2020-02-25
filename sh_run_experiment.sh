@@ -16,7 +16,7 @@ kernel=5
 e=300
 b=12   									# 64 128 256
 page=-1
-lda=0.001
+lda=0.0001
 #lr=0.5				  # 0.5  1.0
 options=		#--truncate
 
@@ -26,8 +26,8 @@ python -u py_dasae.py -path datasets -db1 ${source} -db2 ${target} \
 				-lda ${lda} \
 				-e ${e} -b ${b} -page ${page} \
 				-gpu ${gpu} \
-				${options}
-				> out_DANN_${source}-${target}_w${window}_s${step}_l${layers}_f${filters}_k${kernel}_lda${lda}_e${e}_b${b}_page${page}.txt
+				${options} \
+				> out_DANN_FCN_${source}-${target}_w${window}_s${step}_l${layers}_f${filters}_k${kernel}_lda${lda}_e${e}_b${b}_page${page}.txt
 
 
 exit
