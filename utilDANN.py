@@ -102,7 +102,10 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
         src_generator = batch_generator(source_x_train, source_y_train, batch_size=batch_size // 2)
 
         # Update learning rates
-        lr = float(K.get_value(dann_builder.opt.lr))* (1. / (1. + float(K.get_value(dann_builder.opt.decay)) * float(K.get_value(dann_builder.opt.iterations)) ))
+        if type(dann_builder.opt) is str:
+            lr = dann_builder.opt
+        else:
+            lr = float(K.get_value(dann_builder.opt.lr))* (1. / (1. + float(K.get_value(dann_builder.opt.decay)) * float(K.get_value(dann_builder.opt.iterations)) ))
         print(' - Lr:', lr, ' / Lambda:', dann_builder.grl_layer.get_hp_lambda())
 
         dann_builder.grl_layer.increment_hp_lambda_by(1e-7)      #1e-6  1e-4)  # !!!  ### NEW MODEL ####
