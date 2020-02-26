@@ -17,11 +17,11 @@ class DANNModel(object):
         self.batch_size = config.batch
         self.summary = summary
 
-        # opt = 'adam'
         # Default:      optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False)
         # opt = optimizers.Adam(lr=0.001, decay=0.01)  # 0.005
 
-        self.opt = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+        self.opt = 'adam' #
+        #self.opt = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
 
         self.clsModel = utilModel.ModelSAE(input_shape, config)
 

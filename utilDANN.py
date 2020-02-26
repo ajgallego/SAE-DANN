@@ -95,7 +95,7 @@ def train_dann_batch(dann_model, src_generator, target_genenerator, target_x_tra
 def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_test, source_y_test,
                                                  target_x_train, target_y_train, target_x_test, target_y_test,
                                                 nb_epochs, batch_size, weights_filename):
-    best_label_mse = 0
+    best_label_mse = np.inf
     target_genenerator = batch_generator(target_x_train, None, batch_size=batch_size // 2)
 
     for e in range(nb_epochs):
@@ -105,7 +105,7 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
         lr = float(K.get_value(dann_builder.opt.lr))* (1. / (1. + float(K.get_value(dann_builder.opt.decay)) * float(K.get_value(dann_builder.opt.iterations)) ))
         print(' - Lr:', lr, ' / Lambda:', dann_builder.grl_layer.get_hp_lambda())
 
-        dann_builder.grl_layer.increment_hp_lambda_by(1e-6)      #1e-4)
+        dann_builder.grl_layer.increment_hp_lambda_by(1e-7)      #1e-6  1e-4)  # !!!  ### NEW MODEL ####
 
         # Train batch
         loss, domain_loss, label_loss, domain_acc, label_mse = train_dann_batch(

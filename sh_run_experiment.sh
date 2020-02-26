@@ -11,12 +11,12 @@ target=dibco2016     		#
 window=256
 step=120
 layers=5
-filters=128
-kernel=5
+filters=64					# 64 128
+kernel=3						# 3 5
 e=300
 b=12   									# 64 128 256
 page=-1
-lda=0.0001
+lda=0.00001
 #lr=0.5				  # 0.5  1.0
 options=		#--truncate
 
