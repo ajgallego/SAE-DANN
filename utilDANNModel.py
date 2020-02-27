@@ -23,7 +23,7 @@ class DANNModel(object):
 
         # Default: optimizers.SGD(learning_rate=0.01, momentum=0.0, nesterov=False)
         #self.opt = optimizers.SGD(learning_rate=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-        self.opt = optimizers.SGD(learning_rate=0.001, decay=1e-6, momentum=0.9, nesterov=False)
+        self.opt = optimizers.SGD(lr=0.001, decay=1e-6, momentum=0.9, nesterov=False)
 
         self.clsModel = utilModel.ModelSAE(input_shape, config)
 
