@@ -18,10 +18,12 @@ class DANNModel(object):
         self.summary = summary
 
         # Default:      optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False)
-        # opt = optimizers.Adam(lr=0.001, decay=0.01)  # 0.005
+        # self.opt = optimizers.Adam(lr=0.001, decay=0.01)  # 0.005
+        # self.opt = 'adam' #
 
-        self.opt = 'adam' #
-        #self.opt = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+        # Default: optimizers.SGD(learning_rate=0.01, momentum=0.0, nesterov=False)
+        #self.opt = optimizers.SGD(learning_rate=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+        self.opt = optimizers.SGD(learning_rate=0.001, decay=1e-6, momentum=0.9, nesterov=False)
 
         self.clsModel = utilModel.ModelSAE(input_shape, config)
 

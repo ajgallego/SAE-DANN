@@ -13,21 +13,22 @@ step=120
 layers=5
 filters=64					# 64 128
 kernel=3						# 3 5
+drop=0.2					# 0
 e=300
 b=12   									# 64 128 256
 page=-1
-lda=0.00001
+lda=0.00001		# 0.01  0.001	0.0001	0.00001
 #lr=0.5				  # 0.5  1.0
-options=		#--truncate
+options=			#--truncate
 
 python -u py_dasae.py -path datasets -db1 ${source} -db2 ${target} \
 				-w ${window} -s ${step} \
-				-l ${layers} -f ${filters} -k ${kernel} \
+				-l ${layers} -f ${filters} -k ${kernel} -drop ${drop} \
 				-lda ${lda} \
 				-e ${e} -b ${b} -page ${page} \
 				-gpu ${gpu} \
 				${options} \
-				> out_DANN_FCN_${source}-${target}_w${window}_s${step}_l${layers}_f${filters}_k${kernel}_lda${lda}_e${e}_b${b}_page${page}.txt
+				> out_DANN_FCN_${source}-${target}_w${window}_s${step}_l${layers}_f${filters}_k${kernel}_drop${drop}_lda${lda}_e${e}_b${b}_page${page}.txt
 
 
 exit

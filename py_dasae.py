@@ -207,13 +207,13 @@ def run_dann(datasets, input_shape, weights_foldername, config):
     print('SOURCE:')
     utilMetrics.calculate_best_fm(pred_source, datasets['source']['y_test'])
     print('TARGET:')
-    utilMetrics.calculate_best_fm(pred_target, datasets['target']['y_test'])
+    best_fm, best_th = utilMetrics.calculate_best_fm(pred_target, datasets['target']['y_test'])
 
 
     # Save output images
 
-    #config.modelpath = weights_filename
-    #config.threshold = best_th
+    config.modelpath = weights_filename
+    config.threshold = best_th
     save_images(dann.label_model, config)
 
 

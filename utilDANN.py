@@ -15,24 +15,17 @@ import utilMetrics
 
 # ----------------------------------------------------------------------------
 def get_dann_weights_filename(folder, from_dataset, to_dataset, config):
-    #### NEW MODEL ####
-    #return '{}/weights_dann_model_from_{}_to_{}_e{}_b{}_lda{}.npy'.format(
-    return '{}/weights_dannCONV_model_from_{}_to_{}_e{}_b{}_lda{}.npy'.format(
+    return '{}{}/weights_dannCONV_model_from_{}_to_{}_w{}_s{}_l{}_f{}_k{}_drop{}_page{}_e{}_b{}_lda{}.npy'.format(
                             folder,
-                            #('/truncated' if config.truncate else ''),
+                            ('/truncated' if config.truncate else ''),
                             from_dataset, to_dataset,
-                            str(config.epochs), str(config.batch), str(config.lda))
+                            config.window, config.step,
+                            config.nb_layers,
+                            config.nb_filters, config.k_size,
+                            '_drop'+str(config.dropout) if config.dropout > 0 else '',
+                            str(config.page), str(config.epochs),
+                            str(config.batch), str(config.lda))
 
-    """return "{}_{}_{}x{}_s{}{}{}_f{}_k{}{}_se{}_e{}_b{}_es{}".format(
-                                config.db, config.dbp,
-                                config.window, config.window, config.step,
-                                '_aug' if config.aug else '',
-                                '_drop'+str(config.dropout) if config.dropout > 0 else '',
-                                config.nb_filters,
-                                config.k_size,
-                                '_s' + str(config.stride) if config.stride > 1 else '',
-                                config.nb_super_epoch, config.nb_epoch, config.batch,
-                                arconfiggs.early_stopping_mode)"""
 
 # ----------------------------------------------------------------------------
 def batch_generator(x_data, y_data=None, batch_size=1, shuffle_data=True):
