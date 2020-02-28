@@ -47,81 +47,35 @@ def label_smoothing_loss(y_true, y_pred):
 
 
 # ----------------------------------------------------------------------------
-def train_cnn(model,  source_x_train, source_y_train,
-                                                                 source_x_test, source_y_test,
-                                                                 weights_filename, config):
+def train_cnn(model,  train_data_generator, source_x_test, source_y_test,
+                                weights_filename, config):
+    print('Fit CNN...')
     early_stopping = EarlyStopping(monitor='loss', patience=15)
 
-    validation_data=None
-    if len(source_x_test) > 0:
-        validation_data =(source_x_test, source_y_test)
+    for se in range(config.nb_super_epoch):
+        print(80 * "-")
+        print("SUPER EPOCH: %03d/%03d" % (se+1, config.nb_super_epoch))
 
-    """if config.aug == True:
-        print('Fit CNN using data augmentation...')
-        aug = ImageDataGenerator(
-                                        rotation_range=1,       # 25
-                                        vertical_flip=False,
-                                        horizontal_flip=False,
-                                        width_shift_range=0.05,
-                                        height_shift_range=0.05,
-                                        shear_range=0.0,
-                                        zoom_range=0.05,
-                                        fill_mode="nearest")
-        model.fit_generator(  aug.flow(source_x_train, source_y_train, batch_size=config.batch),
-                                        steps_per_epoch=len(source_x_train) // config.batch,
-                                        epochs=config.epochs,
-                                        validation_data=validation_data,
-                                        verbose=2,
-                                        callbacks=[early_stopping])
-    else:"""
+        train_data_generator.reset()
+        train_data_generator.shuffle()
 
-    print('Fit CNN...')
-    model.fit(source_x_train, source_y_train,
-                            batch_size=config.batch,
-                            epochs=config.epochs,
-                            verbose=2,
-                            shuffle=True,
-                            validation_data=validation_data,
-                            callbacks=[early_stopping])
+        for x_train, y_train in train_data_generator:
+            print("> Train on %03d page samples..." % (len(x_train)))
 
-    model.save(weights_filename)
+            model.fit(x_train, y_train,
+                                    batch_size=config.batch,
+                                    epochs=config.epochs,
+                                    verbose=2,
+                                    shuffle=True,
+                                    validation_data=(source_x_test, source_y_test),
+                                    callbacks=[early_stopping])
+            del x_train, y_train
+            gc.collect()
+
+            model.save_weights(weights_filename, overwrite=True)
+
+    model.save_weights(weights_filename, overwrite=True)
 
     return model
 
-"""
-# ----------------------------------------------------------------------------
-def train_cnn(datasets, input_shape, num_labels, weights_folder, config):
-    for i in range(len(datasets)):
-        if config.from_db is not None and config.from_db != datasets[i]['name']:
-            continue
-
-        model = build_source_model(config.model, input_shape, num_labels, config)
-
-        print('BD: {} \tx_train:{}\ty_train:{}\tx_test:{}\ty_test:{}'.format(
-                    datasets[i]['name'],
-                    datasets[i]['x_train'].shape, datasets[i]['y_train'].shape,
-                    datasets[i]['x_test'].shape, datasets[i]['y_test'].shape))
-
-        weights_filename = get_cnn_weights_filename(weights_folder, datasets[i]['name'], config)
-
-        if config.load == False:
-            model = train_cnn_on_one_dataset(model,
-                                                                datasets[i]['x_train'], datasets[i]['y_train'],
-                                                                datasets[i]['x_test'], datasets[i]['y_test'],
-                                                                weights_filename, config)
-        else:
-            model = load_model(weights_filename)
-
-        # Final evaluation
-        print(80*'-')
-        print('FINAL VALIDATION:')
-        source_loss, source_acc = model.evaluate(datasets[i]['x_test'], datasets[i]['y_test'], verbose=0)
-        print(' - Source test set "{}" accuracy: {:.4f}'.format(datasets[i]['name'], source_acc))
-
-        for j in range(len(datasets)):
-            if i == j or (config.to_db is not None and config.to_db != datasets[j]['name']):
-                continue
-            target_loss, target_acc = model.evaluate(datasets[j]['x_test'], datasets[j]['y_test'], verbose=0)
-            print(' - Target test set "{}" accuracy: {:.4f}'.format(datasets[j]['name'], target_acc))
-"""
 

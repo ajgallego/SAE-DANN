@@ -6,7 +6,7 @@
 
 gpu=0
 
-type=dann							# dann cnn
+type=cnn							# dann cnn
 source=sal            				# 'dibco2016','dibco2014','palm0','palm1','phi','ein','sal','voy','bdi','all'
 target=dibco2016     		#
 window=256
@@ -20,7 +20,7 @@ b=12   									# 64 128 256
 page=-1
 lda=0.00001		# 0.01  0.001	0.0001	0.00001
 #lr=0.5				  # 0.5  1.0
-options=--test			#--test  --truncate
+options=			#--test  --truncate
 
 python -u py_dasae.py -type ${type} \
 				-path datasets -db1 ${source} -db2 ${target} \
