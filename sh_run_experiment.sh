@@ -40,7 +40,7 @@ for layers in 2 3 4 5 6; do   # 16 32 64 128 256 512
 	for filters in 8 16 32 64 128 256; do
 	    for kernel in 3 5 7; do
 			for drop in 0 0.1 0.2 0.5; do
-				for lda in 0.01 0.001 0.0001 0.00001 0.000001; do
+				for lda in 0.1 0.01 0.001 0.0001 0.00001 0.000001; do
 					python -u py_dasae.py -type ${type} \
 								-path datasets -db1 ${source} -db2 ${target} \
 								-w ${window} -s ${step} \
