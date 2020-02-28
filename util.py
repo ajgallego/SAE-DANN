@@ -34,6 +34,12 @@ def print_tabulated(list):
 
 
 # ----------------------------------------------------------------------------
+def print_stats(var_name, var):
+    print(' - {}: shape {} - min {:.2f} - max {:.2f} - mean {:.2f} - std {:.2f}'.format(
+            var_name, var.shape, np.min(var), np.max(var), np.mean(var), np.std(var)))
+
+
+# ----------------------------------------------------------------------------
 def mkdirp(directory):
     if not os.path.isdir(directory):
         os.makedirs(directory)
@@ -90,45 +96,6 @@ def smooth_labels(y, smooth_factor=.1):
     return y
 
 
-#------------------------------------------------------------------------------
-"""def runEditing(X, Y, k, n_jobs=1):
-    loo = LeaveOneOut(len(X))
-
-    for train_index, test_index in loo:
-        #print("TRAIN:", train_index, "TEST:", test_index)
-        X_train, X_test = X[train_index], X[test_index]
-        Y_train, Y_test = Y[train_index], Y[test_index]
-        #print(X_train, X_test, y_train, y_test)
-
-        clf = KNeighborsClassifier(n_neighbors=k, n_jobs=n_jobs)
-        clf.fit(X_train, Y_train)
-        Y_pred = clf.predict(X_test)
-        print('.')
-        if Y_pred != Y_test[0]:
-            print('quitar')"""
-
-
-# ----------------------------------------------------------------------------
-class MyEarlyStopping():
-    def __init__(self, patience=0, monitor='min'):
-        assert patience > 1
-        self.patience = patience
-        self.monitor_op = np.less if monitor=='min' else np.greater
-        self.best = np.Inf if monitor=='min' else -np.Inf
-        self.wait = 0
-
-    def check_stop(self, loss):
-        if self.monitor_op(loss, self.best):
-            self.best = loss
-            self.wait = 0
-        else:
-            if self.wait >= self.patience:
-                print(' - Early stopping!')
-                return True
-            self.wait += 1
-        return False
-
-
 # ----------------------------------------------------------------------------
 def show_histogram(values):
     plt.hist(values)
@@ -155,11 +122,3 @@ def imshow_grid(images, shape=[2, 8]):
         grid[i].axis('off')
         grid[i].imshow(images[i])
     plt.show()
-
-
-# ----------------------------------------------------------------------------
-def get_categorical_map_from_list(Y):
-    categories = set(Y)
-    category_map = dict([(char,i) for i, char in enumerate(categories)])
-    return category_map
-

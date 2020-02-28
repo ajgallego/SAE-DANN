@@ -1,5 +1,6 @@
 .vscode/*
 BACKUP
+OUTPUT
 datasets*
 OTHER*
 WEIGHTS*
