@@ -48,6 +48,9 @@ y_sufix = '_GT'
 WEIGHTS_CNN_FOLDERNAME = 'WEIGHTS_CNN'
 WEIGHTS_DANN_FOLDERNAME = 'WEIGHTS_DANN'
 
+LOGS_CNN_FOLDERNAME = 'LOGS_CNN'
+LOGS_DANN_FOLDERNAME = 'LOGS_DANN'
+
 util.mkdirp( WEIGHTS_CNN_FOLDERNAME + '/truncated')
 util.mkdirp( WEIGHTS_DANN_FOLDERNAME + '/truncated')
 
@@ -156,6 +159,8 @@ def save_images(model, array_files_to_save, config):
         outFilename = outFilename.replace('.h5', '').replace('.npy', '')
         outFilename = outFilename.replace(WEIGHTS_DANN_FOLDERNAME, '')
         outFilename = outFilename.replace(WEIGHTS_CNN_FOLDERNAME, '')
+        outFilename = outFilename.replace(LOGS_DANN_FOLDERNAME, '')
+        outFilename = outFilename.replace(LOGS_CNN_FOLDERNAME, '')
 
         print(' - Saving image to:', outFilename)
         util.mkdirp( os.path.dirname(outFilename) )
@@ -202,11 +207,15 @@ def train_and_evaluate(datasets, input_shape, config):
         weights_filename = utilDANN.get_dann_weights_filename( WEIGHTS_DANN_FOLDERNAME,
                                                                                                         datasets['source']['name'],
                                                                                                         datasets['target']['name'], config)
+        logs_filename = utilDANN.get_dann_logs_filename( LOGS_DANN_FOLDERNAME,
+                                                                                                        datasets['source']['name'],
+                                                                                                        datasets['target']['name'], config)
+                                                                                                        
         if config.test == False:
             print('Train SAE DANN...')
             utilDANN.train_dann(dann, datasets['source'], datasets['target'],
                                                         config.page, config.nb_super_epoch,
-                                                        config.epochs, config.batch, weights_filename,
+                                                        config.epochs, config.batch, weights_filename, logs_filename,
                                                         config.lda)
         else:
             dann.load( weights_filename )  # Load the last save weights...
@@ -214,7 +223,14 @@ def train_and_evaluate(datasets, input_shape, config):
     elif config.type == 'cnn':
             print('Train SAE (without DA)...')
             weights_filename = utilCNN.get_cnn_weights_filename( WEIGHTS_CNN_FOLDERNAME,
+             
                                                                                                         datasets['source']['name'], config)
+            '''
+            Add logs filename with CNN model
+            logs_filename = utilCNN.get_cnn_weights_filename( LOGS_CNN_FOLDERNAME,
+                                                                                                        datasets['source']['name'], config)
+            '''
+                                                                                                    
             if config.test == False:
                 utilCNN.train_cnn(dann.label_model,  datasets['source']['generator'],
                                                                  datasets['source']['x_test'], datasets['source']['y_test'],
