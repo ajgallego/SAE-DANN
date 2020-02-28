@@ -6,7 +6,7 @@
 
 gpu=0
 
-type=cnn							# dann cnn
+type=dann							# dann cnn
 source=sal            				# 'dibco2016','dibco2014','palm0','palm1','phi','ein','sal','voy','bdi','all'
 target=dibco2016     		#
 window=256
@@ -30,7 +30,7 @@ python -u py_dasae.py -type ${type} \
 				-e ${e} -b ${b} -page ${page} \
 				-gpu ${gpu} \
 				${options} \
-				#> out_${type}_${source}-${target}_w${window}_s${step}_l${layers}_f${filters}_k${kernel}_drop${drop}_lda${lda}_e${e}_b${b}_page${page}_${options}.txt
+				> out_${type}_${source}-${target}_w${window}_s${step}_l${layers}_f${filters}_k${kernel}_drop${drop}_lda${lda}_e${e}_b${b}_page${page}_${options}.txt
 
 exit
 
