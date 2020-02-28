@@ -67,7 +67,7 @@ class ModelSAE(AbstractModel):
                                 padding='same')(from_layer)
         # x = BatchNormalization(axis=self.bn_axis)(x)          #### NEW MODEL ####
         x = Activation('relu')(x)
-        if self.config.dropout > 0:
+        if self.config.dropout > 0:                                                     #### NEW MODEL ####
             x = Dropout(self.config.dropout, seed=42)(x)
         return x
 

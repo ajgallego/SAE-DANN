@@ -79,6 +79,8 @@ def normalize_data( x_data, norm_type ):
         x_data /= STD + 0.00001
     elif norm_type == 'fmean':
         x_data -= MEAN
+    else:
+        raise Exception('Norm type not implemented')
 
     return x_data
 
@@ -224,7 +226,9 @@ class LazyChunkGenerator(LazyFileLoader):
 
        print('> Loading page from', self.pos, 'to', self.pos + psize, '...')
        gc.collect()
-       X_data, Y_data = generate_chunks(self.array_x_files[self.pos:self.pos + psize], self.x_sufix, self.y_sufix, self.window_size, self.step_size)
+       X_data, Y_data = generate_chunks(self.array_x_files[self.pos:self.pos + psize],
+                                                                               self.x_sufix, self.y_sufix,
+                                                                               self.window_size, self.step_size)
        self.pos += self.page_size
 
        return X_data, Y_data

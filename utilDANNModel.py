@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
-import utilModel
+import os
 import numpy as np
-from utilGradientReversal import GradientReversal
 from keras import applications
 from keras import optimizers
 from keras.models import Model
 from keras.layers import Dense, Lambda
 from keras import backend as K
+from utilGradientReversal import GradientReversal
+import utilModel
+
 
 
 class DANNModel(object):
@@ -23,7 +25,7 @@ class DANNModel(object):
 
         # Default: optimizers.SGD(learning_rate=0.01, momentum=0.0, nesterov=False)
         #self.opt = optimizers.SGD(learning_rate=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-        self.opt = optimizers.SGD(lr=0.001, decay=1e-6, momentum=0.9, nesterov=False)
+        self.opt = optimizers.SGD(lr=0.001, decay=1e-6, momentum=0.9, nesterov=False)      #### NEW MODEL ####
 
         self.clsModel = utilModel.ModelSAE(input_shape, config)
 
@@ -33,6 +35,7 @@ class DANNModel(object):
 
     # -------------------------------------------------------------------------
     def load(self, filename):
+        assert filename and os.path.isfile(filename), 'Filename: ' + str(filename)
         weight = np.load(filename, allow_pickle=True)
         self.dann_model.set_weights(weight)
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import utilModels
+#import utilModels
 from keras.models import Model
 from keras.layers import Dense
 from keras import optimizers
@@ -10,12 +10,17 @@ import tensorflow as tf
 
 
 # ----------------------------------------------------------------------------
-def get_cnn_weights_filename(weights_folder, dataset_name, config):
-    return '{}{}/weights_cnn_model_v{}_for_{}_e{}_b{}{}.npy'.format(
-                            weights_folder, ('/truncated' if config.truncate else ''),
-                            str(config.model), dataset_name,
-                            str(config.epochs), str(config.batch),
-                            ('_aug' if config.aug else ''))
+def get_cnn_weights_filename(folder, dataset_name, config):
+    return '{}{}/weights_cnn_model_{}_w{}_s{}_l{}_f{}_k{}_drop{}_page{}_e{}_b{}.npy'.format(
+                            folder,
+                            ('/truncated' if config.truncate else ''),
+                            dataset_name,
+                            config.window, config.step,
+                            config.nb_layers,
+                            config.nb_filters, config.k_size,
+                            '_drop'+str(config.dropout) if config.dropout > 0 else '',
+                            str(config.page), str(config.epochs),
+                            str(config.batch))
 
 
 # -------------------------------------------------------------------------
@@ -25,33 +30,33 @@ def label_smoothing_loss(y_true, y_pred):
 
 # -------------------------------------------------------------------------
 '''Create the source or label model separately'''
-def build_source_model(model_number, input_shape, nb_classes, config):
-    auxModel = getattr(utilModels, "ModelV" + str(model_number))(input_shape)
+"""def build_source_model(input_shape, config):
+    clsModel = utilModel.ModelSAE(input_shape, config)
 
-    net = auxModel.get_model_features()
-    net = auxModel.get_model_labels( net )
-    net = Dense(nb_classes, activation='softmax', name='classifier_output')(net)
+    net = clsModel.get_model_features()
+    net = clsModel.get_model_labels( net )
+    label_model = Model(input=clsModel.input, output=net)
 
-    model = Model(input=auxModel.input, output=net)
+    # opt = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+    opt = optimizers.SGD(lr=0.001, decay=1e-6, momentum=0.9, nesterov=False)
 
-    opt = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+    model.compile(loss={'classifier_output': 'binary_crossentropy'},
+                                               optimizer=opt, metrics=['mse'])
 
-    model.compile(loss={'classifier_output': 'categorical_crossentropy'},
-                                               optimizer=opt, metrics=['accuracy'])
-
-    return model
+    return model"""
 
 
 # ----------------------------------------------------------------------------
-def train_cnn_on_one_dataset(model,  source_x_train, source_y_train,
-                                                                 source_x_test, source_y_test, weights_filename, config):
+def train_cnn(model,  source_x_train, source_y_train,
+                                                                 source_x_test, source_y_test,
+                                                                 weights_filename, config):
     early_stopping = EarlyStopping(monitor='loss', patience=15)
 
     validation_data=None
     if len(source_x_test) > 0:
         validation_data =(source_x_test, source_y_test)
 
-    if config.aug == True:
+    """if config.aug == True:
         print('Fit CNN using data augmentation...')
         aug = ImageDataGenerator(
                                         rotation_range=1,       # 25
@@ -68,9 +73,10 @@ def train_cnn_on_one_dataset(model,  source_x_train, source_y_train,
                                         validation_data=validation_data,
                                         verbose=2,
                                         callbacks=[early_stopping])
-    else:
-        print('Fit CNN...')
-        model.fit(source_x_train, source_y_train,
+    else:"""
+
+    print('Fit CNN...')
+    model.fit(source_x_train, source_y_train,
                             batch_size=config.batch,
                             epochs=config.epochs,
                             verbose=2,
@@ -82,7 +88,7 @@ def train_cnn_on_one_dataset(model,  source_x_train, source_y_train,
 
     return model
 
-
+"""
 # ----------------------------------------------------------------------------
 def train_cnn(datasets, input_shape, num_labels, weights_folder, config):
     for i in range(len(datasets)):
@@ -117,4 +123,5 @@ def train_cnn(datasets, input_shape, num_labels, weights_folder, config):
                 continue
             target_loss, target_acc = model.evaluate(datasets[j]['x_test'], datasets[j]['y_test'], verbose=0)
             print(' - Target test set "{}" accuracy: {:.4f}'.format(datasets[j]['name'], target_acc))
+"""
 
