@@ -4,6 +4,7 @@ OUTPUT
 datasets*
 OTHER*
 WEIGHTS*
+LOGS*
 RESULTS*
 model_*
 log*
