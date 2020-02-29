@@ -155,7 +155,7 @@ def train_cnn(model, source, target,
                     weights_filename, logs_directory, config):
     print('Training CNN model...')
 
-    logs_filename = logs_filename = get_cnn_logs_filename( logs_directory,
+    logs_filename = get_cnn_logs_filename( logs_directory,
                                                                     source['name'],
                                                                     target['name'], config)
 
@@ -183,7 +183,7 @@ def train_cnn(model, source, target,
 
             __train_cnn_page(model, source_x_train, source_y_train, source['x_test'], source['y_test'],
                                                     target['x_test'], target['y_test'],
-                                                    config.epochs, config.batch, weights_filename, tensorboardconfig.)
+                                                    config.epochs, config.batch, weights_filename, tensorboard)
 
 """
 # ----------------------------------------------------------------------------
