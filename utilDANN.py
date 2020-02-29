@@ -143,25 +143,17 @@ def train_dann_batch(dann_model, src_generator, target_genenerator, target_x_tra
 # ----------------------------------------------------------------------------
 def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_test, source_y_test,
                                                  target_x_train, target_y_train, target_x_test, target_y_test,
-                                                nb_epochs, batch_size, weights_filename, logs_filename):
+                                                nb_epochs, batch_size, weights_filename, tensorboard):
     best_label_f1 = -1
     target_genenerator = batch_generator(target_x_train, None, batch_size=batch_size // 2)
 
-    def named_logs(source_f1, target_f1):
+    def named_logs(source_f1, target_f1, hp_lambda):
         result = {}
         result["source_f1"] = source_f1
         result["target_f1"] = target_f1
+        result["lambda"] = hp_lambda
         
         return result
-
-    tensorboard = TensorBoard(
-                log_dir=logs_filename,
-                histogram_freq=0,
-                batch_size=batch_size,
-                write_graph=True,
-                write_grads=True
-                )
-    tensorboard.set_model(dann_builder.dann_model)
 
     for e in range(nb_epochs):
         src_generator = batch_generator(source_x_train, source_y_train, batch_size=batch_size // 2)
@@ -173,7 +165,7 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
             lr = float(K.get_value(dann_builder.opt.lr))* (1. / (1. + float(K.get_value(dann_builder.opt.decay)) * float(K.get_value(dann_builder.opt.iterations)) ))
         print(' - Lr:', lr, ' / Lambda:', dann_builder.grl_layer.get_hp_lambda())
 
-        dann_builder.grl_layer.increment_hp_lambda_by(1e-7)      #1e-6  1e-4)  # !!!  ### NEW MODEL ####
+        dann_builder.grl_layer.increment_hp_lambda_by(1e-4)      #1e-6  1e-4)  # !!!  ### NEW MODEL ####
 
         # Train batch
         loss, domain_loss, label_loss, domain_acc, label_mse = train_dann_batch(
@@ -199,7 +191,7 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
         print("Epoch [{}/{}]: source label loss={:.4f}, mse={:.4f}, f1={:.4f} | domain loss={:.4f}, acc={:.4f} | target label loss={:.4f}, mse={:.4f}, f1={:.4f} | {}".format(
                             e+1, nb_epochs, label_loss, label_mse, source_f1, domain_loss, domain_acc, target_loss, target_mse, target_f1, saved))
 
-        tensorboard.on_epoch_end(e, named_logs(source_f1=source_f1, target_f1=target_f1))
+        tensorboard.on_epoch_end(e, named_logs(source_f1=source_f1, target_f1=target_f1, hp_lambda=dann_builder.grl_layer.get_hp_lambda()))
 
 
         """
@@ -226,6 +218,16 @@ def train_dann(dann_builder, source, target, page, nb_super_epoch, nb_epochs,
 
     dann_builder.grl_layer.set_hp_lambda(initial_hp_lambda)
 
+    util.deleteFolder(logs_filename)
+    tensorboard = TensorBoard(
+                log_dir=logs_filename,
+                histogram_freq=0,
+                batch_size=batch_size,
+                write_graph=True,
+                write_grads=True
+                )
+    tensorboard.set_model(dann_builder.dann_model)
+
     for se in range(nb_super_epoch):
         print(80 * "-")
         print("SUPER EPOCH: %03d/%03d" % (se+1, nb_super_epoch))
@@ -248,5 +250,5 @@ def train_dann(dann_builder, source, target, page, nb_super_epoch, nb_epochs,
 
             __train_dann_page(dann_builder, source_x_train, source_y_train, source['x_test'], source['y_test'],
                                                     target_x_train, target_y_train, target['x_test'], target['y_test'],
-                                                    nb_epochs, batch_size, weights_filename, logs_filename)
+                                                    nb_epochs, batch_size, weights_filename, tensorboard)
 

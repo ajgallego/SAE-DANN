@@ -222,19 +222,19 @@ def train_and_evaluate(datasets, input_shape, config):
 
     elif config.type == 'cnn':
             print('Train SAE (without DA)...')
-            weights_filename = utilCNN.get_cnn_weights_filename( WEIGHTS_CNN_FOLDERNAME,
-             
+            weights_filename = utilCNN.get_cnn_weights_filename( WEIGHTS_CNN_FOLDERNAME, 
                                                                                                         datasets['source']['name'], config)
-            '''
-            Add logs filename with CNN model
-            logs_filename = utilCNN.get_cnn_weights_filename( LOGS_CNN_FOLDERNAME,
-                                                                                                        datasets['source']['name'], config)
-            '''
+            
+            logs_filename = utilCNN.get_cnn_logs_filename( LOGS_CNN_FOLDERNAME,
+                                                                                                        datasets['source']['name'],
+                                                                                                        datasets['target']['name'], config)
                                                                                                     
             if config.test == False:
-                utilCNN.train_cnn(dann.label_model,  datasets['source']['generator'],
-                                                                 datasets['source']['x_test'], datasets['source']['y_test'],
-                                                                 weights_filename, config)
+                util.deleteFolder(logs_filename)
+                utilCNN.train_cnn(dann.label_model,  datasets['source'], datasets['target'],
+                                                            config.page, config.nb_super_epoch,
+                                                            config.epochs, config.batch, weights_filename, logs_filename,
+                                                            config.lda)
             else:
                 dann.label_model.load_weights(weights_filename)
     else:

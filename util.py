@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import ImageGrid
 import tensorflow as tf
+import shutil
 
 
 #------------------------------------------------------------------------------
@@ -44,6 +45,11 @@ def mkdirp(directory):
     if not os.path.isdir(directory):
         os.makedirs(directory)
 
+
+# ----------------------------------------------------------------------------
+def deleteFolder(directory):
+    if os.path.isdir(directory):
+        shutil.rmtree(directory, ignore_errors=True)
 
 # ----------------------------------------------------------------------------
 # Return the list of files in folder
