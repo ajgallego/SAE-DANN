@@ -212,15 +212,15 @@ def train_and_evaluate(datasets, input_shape, config):
             dann.load( weights_filename )  # Load the last save weights...
 
     elif config.type == 'cnn':
-            print('Train SAE (without DA)...')
-            weights_filename = utilCNN.get_cnn_weights_filename( WEIGHTS_CNN_FOLDERNAME,
-                                                                                                        datasets['source']['name'], config)
-            if config.test == False:
-                utilCNN.train_cnn(dann.label_model,  datasets['source']['generator'],
-                                                                 datasets['source']['x_test'], datasets['source']['y_test'],
-                                                                 weights_filename, config)
-            else:
-                dann.label_model.load_weights(weights_filename)
+        print('Train SAE (without DA)...')
+        weights_filename = utilCNN.get_cnn_weights_filename( WEIGHTS_CNN_FOLDERNAME,
+                                                                                                    datasets['source']['name'], config)
+        if config.test == False:
+            utilCNN.train_cnn(dann.label_model,  datasets['source']['generator'],
+                                                                datasets['source']['x_test'], datasets['source']['y_test'],
+                                                                weights_filename, config)
+        else:
+            dann.label_model.load_weights(weights_filename)
     else:
         raise Exception('Unknown type')
 
