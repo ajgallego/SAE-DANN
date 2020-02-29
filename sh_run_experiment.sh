@@ -1,25 +1,21 @@
 #!/bin/bash
 
-#python -u py_dasae.py -path datasets -db1 sal -db2 dibco2016 -s 128 -l 5 -f 128 -gpu 0
-#python -u py_dasae.py -path datasets -db1 dibco2016 -db2 palm0
-#exit
-
 gpu=0
 
-type=dann							# dann cnn
-source=sal            				# 'dibco2016','dibco2014','palm0','palm1','phi','ein','sal','voy','bdi','all'
+type=cnn			# dann cnn
+source=sal			# 'dibco2016','dibco2014','palm0','palm1','phi','ein','sal','voy','bdi','all'
 target=dibco2016     		#
 window=256
 step=120
 layers=5
-filters=64					# 64 128
-kernel=3						# 3 5
-drop=0.2					# 0
-e=300
-b=12   									# 64 128 256
+filters=64			# 64 128
+kernel=3			# 3 5
+drop=0.2			# 0
+e=1				# 300
+b=12   				# 64 128 256
 page=-1
-lda=0.00001		# 0.01  0.001	0.0001	0.00001
-#lr=0.5				  # 0.5  1.0
+lda=0.00001			# 0.01  0.001	0.0001	0.00001
+#lr=0.5				# 0.5  1.0
 options=			#--test  --truncate
 
 python -u py_dasae.py -type ${type} \
@@ -30,7 +26,7 @@ python -u py_dasae.py -type ${type} \
 				-e ${e} -b ${b} -page ${page} \
 				-gpu ${gpu} \
 				${options} \
-				> out_${type}_${source}-${target}_w${window}_s${step}_l${layers}_f${filters}_k${kernel}_drop${drop}_lda${lda}_e${e}_b${b}_page${page}_${options}.txt
+				#> out_${type}_${source}-${target}_w${window}_s${step}_l${layers}_f${filters}_k${kernel}_drop${drop}_lda${lda}_e${e}_b${b}_page${page}_${options}.txt
 
 exit
 

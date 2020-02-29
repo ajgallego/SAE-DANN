@@ -210,7 +210,7 @@ def train_and_evaluate(datasets, input_shape, config):
         logs_filename = utilDANN.get_dann_logs_filename( LOGS_DANN_FOLDERNAME,
                                                                                                         datasets['source']['name'],
                                                                                                         datasets['target']['name'], config)
-                                                                                                        
+
         if config.test == False:
             print('Train SAE DANN...')
             utilDANN.train_dann(dann, datasets['source'], datasets['target'],
