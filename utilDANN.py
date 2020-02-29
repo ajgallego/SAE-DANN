@@ -175,7 +175,7 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
         source_f1, source_th = utilMetrics.calculate_best_fm(source_prediction, source_y_train)
 
         saved = ""
-        if source_f1 <= best_label_f1:
+        if source_f1 >= best_label_f1:
             best_label_f1 = source_f1
             dann_builder.save(weights_filename)
             saved = "SAVED"
@@ -212,25 +212,27 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
 
 
 # ----------------------------------------------------------------------------
-def train_dann(dann_builder, source, target, page, nb_super_epoch, nb_epochs,
-                                    batch_size, weights_filename, logs_filename, initial_hp_lambda=0.01):
+def train_dann(dann_builder, source, target,
+                                    weights_filename, logs_directory, config):
     print('Training DANN model...')
 
-    dann_builder.grl_layer.set_hp_lambda(initial_hp_lambda)
+    dann_builder.grl_layer.set_hp_lambda(config.lda)
+
+    logs_filename = get_dann_logs_filename( logs_directory, source['name'], target['name'], config)
 
     util.deleteFolder(logs_filename)
     tensorboard = TensorBoard(
                 log_dir=logs_filename,
                 histogram_freq=0,
-                batch_size=batch_size,
+                batch_size=config.batch,
                 write_graph=True,
                 write_grads=True
                 )
     tensorboard.set_model(dann_builder.dann_model)
 
-    for se in range(nb_super_epoch):
+    for se in range(config.nb_super_epoch):
         print(80 * "-")
-        print("SUPER EPOCH: %03d/%03d" % (se+1, nb_super_epoch))
+        print("SUPER EPOCH: %03d/%03d" % (se+1, config.nb_super_epoch))
 
         source['generator'].reset()
         source['generator'].shuffle()
@@ -250,5 +252,5 @@ def train_dann(dann_builder, source, target, page, nb_super_epoch, nb_epochs,
 
             __train_dann_page(dann_builder, source_x_train, source_y_train, source['x_test'], source['y_test'],
                                                     target_x_train, target_y_train, target['x_test'], target['y_test'],
-                                                    nb_epochs, batch_size, weights_filename, tensorboard)
+                                                    config.epochs, config.batch, weights_filename, tensorboard)
 

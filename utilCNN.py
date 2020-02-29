@@ -119,7 +119,7 @@ def __train_cnn_page(model, source_x_train, source_y_train, source_x_test, sourc
         source_f1, source_th = utilMetrics.calculate_best_fm(source_prediction, source_y_train)
 
         saved = ""
-        if source_f1 <= best_label_f1:
+        if source_f1 >= best_label_f1:
             best_label_f1 = source_f1
             model.save(weights_filename)
             saved = "SAVED"
@@ -151,24 +151,27 @@ def __train_cnn_page(model, source_x_train, source_y_train, source_x_test, sourc
 
 
 # ----------------------------------------------------------------------------
-def train_cnn(model, source, target, page, nb_super_epoch, nb_epochs,
-                                    batch_size, weights_filename, logs_filename, initial_hp_lambda=0.01):
+def train_cnn(model, source, target,
+                    weights_filename, logs_directory, config):
     print('Training CNN model...')
 
-    util.deleteFolder(logs_filename)
+    logs_filename = logs_filename = get_cnn_logs_filename( logs_directory,
+                                                                    source['name'],
+                                                                    target['name'], config)
 
+    util.deleteFolder(logs_filename)
     tensorboard = TensorBoard(
                 log_dir=logs_filename,
                 histogram_freq=0,
-                batch_size=batch_size,
+                batch_size=config.batch,
                 write_graph=True,
                 write_grads=True
                 )
     tensorboard.set_model(model)
 
-    for se in range(nb_super_epoch):
+    for se in range(config.nb_super_epoch):
         print(80 * "-")
-        print("SUPER EPOCH: %03d/%03d" % (se+1, nb_super_epoch))
+        print("SUPER EPOCH: %03d/%03d" % (se+1, config.nb_super_epoch))
 
         source['generator'].reset()
         source['generator'].shuffle()
@@ -180,8 +183,7 @@ def train_cnn(model, source, target, page, nb_super_epoch, nb_epochs,
 
             __train_cnn_page(model, source_x_train, source_y_train, source['x_test'], source['y_test'],
                                                     target['x_test'], target['y_test'],
-                                                    nb_epochs, batch_size, weights_filename, tensorboard)
-
+                                                    config.epochs, config.batch, weights_filename, tensorboardconfig.)
 
 """
 # ----------------------------------------------------------------------------

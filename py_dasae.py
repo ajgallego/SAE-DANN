@@ -207,34 +207,22 @@ def train_and_evaluate(datasets, input_shape, config):
         weights_filename = utilDANN.get_dann_weights_filename( WEIGHTS_DANN_FOLDERNAME,
                                                                                                         datasets['source']['name'],
                                                                                                         datasets['target']['name'], config)
-        logs_filename = utilDANN.get_dann_logs_filename( LOGS_DANN_FOLDERNAME,
-                                                                                                        datasets['source']['name'],
-                                                                                                        datasets['target']['name'], config)
-
         if config.test == False:
             print('Train SAE DANN...')
             utilDANN.train_dann(dann, datasets['source'], datasets['target'],
-                                                        config.page, config.nb_super_epoch,
-                                                        config.epochs, config.batch, weights_filename, logs_filename,
-                                                        config.lda)
+                                                        weights_filename,
+                                                        LOGS_DANN_FOLDERNAME,
+                                                        config)
         else:
             dann.load( weights_filename )  # Load the last save weights...
 
     elif config.type == 'cnn':
             print('Train SAE (without DA)...')
-            weights_filename = utilCNN.get_cnn_weights_filename( WEIGHTS_CNN_FOLDERNAME, 
-                                                                                                        datasets['source']['name'], config)
-            
-            logs_filename = utilCNN.get_cnn_logs_filename( LOGS_CNN_FOLDERNAME,
-                                                                                                        datasets['source']['name'],
-                                                                                                        datasets['target']['name'], config)
+            weights_filename = utilCNN.get_cnn_weights_filename( WEIGHTS_CNN_FOLDERNAME, datasets['source']['name'], config)
                                                                                                     
             if config.test == False:
-                util.deleteFolder(logs_filename)
                 utilCNN.train_cnn(dann.label_model,  datasets['source'], datasets['target'],
-                                                            config.page, config.nb_super_epoch,
-                                                            config.epochs, config.batch, weights_filename, logs_filename,
-                                                            config.lda)
+                                                        weights_filename, LOGS_CNN_FOLDERNAME, config)
             else:
                 dann.label_model.load_weights(weights_filename)
     else:
