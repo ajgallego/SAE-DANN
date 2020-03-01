@@ -6,12 +6,12 @@ type=cnn			# dann cnn
 source=sal			# 'dibco2016','dibco2014','palm0','palm1','phi','ein','sal','voy','bdi','all'
 target=dibco2016     		#
 window=256
-step=120
+step=120				#	-1  120
 layers=5
 filters=64			# 64 128
 kernel=3			# 3 5
 drop=0.2			# 0
-e=1				# 300
+e=300					# 300
 b=12   				# 64 128 256
 page=-1
 lda=0.00001			# 0.01  0.001	0.0001	0.00001
@@ -26,7 +26,7 @@ python -u py_dasae.py -type ${type} \
 				-e ${e} -b ${b} -page ${page} \
 				-gpu ${gpu} \
 				${options} \
-				#> out_${type}_${source}-${target}_w${window}_s${step}_l${layers}_f${filters}_k${kernel}_drop${drop}_lda${lda}_e${e}_b${b}_page${page}_${options}.txt
+				> out_${type}_${source}-${target}_w${window}_s${step}_l${layers}_f${filters}_k${kernel}_drop${drop}_lda${lda}_e${e}_b${b}_page${page}_${options}.txt
 
 exit
 
