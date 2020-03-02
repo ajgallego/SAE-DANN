@@ -105,8 +105,8 @@ class ModelSAE(AbstractModel):
         x = Dense(2, activation='softmax', name='domain_output')(x)
         """
         #### NEW MODEL ####
-        #back = self.config.nb_filters
-        #self.config.nb_filters = int(back / 4)
+        back = self.config.nb_filters
+        self.config.nb_filters = int(back / 4)
 
         x = input
         for i in xrange(self.config.nb_layers):
@@ -118,7 +118,7 @@ class ModelSAE(AbstractModel):
                                     name='domain_output',
                                     padding='same', activation='sigmoid')(x)
 
-        #self.config.nb_filters = back
+        self.config.nb_filters = back
 
         return x
 
