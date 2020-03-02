@@ -84,6 +84,7 @@ def menu():
     parser.add_argument('--truncate',   action='store_true', help='Truncate data')
     parser.add_argument('--test',   action='store_true', help='Only run test')
     parser.add_argument('--show',   action='store_true', help='Show the result')
+    parser.add_argument('--save',   action='store_true', help='Save binarized output images')
     parser.add_argument('-loadmodel', type=str,   help='Weights filename to load for test')
 
     parser.add_argument('-gpu',    default='0',    type=str,   help='GPU')
@@ -219,7 +220,7 @@ def train_and_evaluate(datasets, input_shape, config):
     elif config.type == 'cnn':
             print('Train SAE (without DA)...')
             weights_filename = utilCNN.get_cnn_weights_filename( WEIGHTS_CNN_FOLDERNAME, datasets['source']['name'], config)
-                                                                                                    
+
             if config.test == False:
                 utilCNN.train_cnn(dann.label_model,  datasets['source'], datasets['target'],
                                                         weights_filename, LOGS_CNN_FOLDERNAME, config)
@@ -243,12 +244,11 @@ def train_and_evaluate(datasets, input_shape, config):
 
 
     # Save output images
-
-    config.modelpath = weights_filename
-    config.threshold = target_best_th
-
-    _, target_test_folds = utilIO.load_folds_names(config.db2)
-    save_images(dann.label_model, target_test_folds, config)
+    if config.save:
+        config.modelpath = weights_filename
+        config.threshold = target_best_th
+        _, target_test_folds = utilIO.load_folds_names(config.db2)
+        save_images(dann.label_model, target_test_folds, config)
 
 
 

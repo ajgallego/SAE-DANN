@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import numpy as np
+from keras.utils import plot_model
 from keras import applications
 from keras import optimizers
 from keras.models import Model
@@ -94,6 +95,8 @@ class DANNModel(object):
 
         if self.summary:
             print(dann_model.summary())
+            #plot_model(dann_model, to_file='model.png', show_shapes=True,
+            #                         show_layer_names=True, rankdir='TB', expand_nested=False, dpi=96)
 
         return dann_model, label_model, tsne_model
 

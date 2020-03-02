@@ -2,7 +2,7 @@
 
 gpu=0
 
-type=cnn			# dann cnn
+type=dann			# dann cnn
 source=sal			# 'dibco2016','dibco2014','palm0','palm1','phi','ein','sal','voy','bdi','all'
 target=dibco2016     		#
 window=256
