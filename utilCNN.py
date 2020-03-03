@@ -87,7 +87,7 @@ def batch_generator(x_data, y_data=None, batch_size=1, shuffle_data=True):
 
 # ----------------------------------------------------------------------------
 def train_cnn_batch(model, train_generator, batch_size):
-    
+
     for batchXs, batchYs in train_generator:
         result = model.train_on_batch(batchXs, batchYs)
 
@@ -106,7 +106,6 @@ def __train_cnn_page(model, source_x_train, source_y_train, source_x_test, sourc
         result = {}
         result["source_f1"] = source_f1
         result["target_f1"] = target_f1
-        
         return result
 
     for e in range(nb_epochs):
@@ -121,7 +120,7 @@ def __train_cnn_page(model, source_x_train, source_y_train, source_x_test, sourc
         saved = ""
         if source_f1 >= best_label_f1:
             best_label_f1 = source_f1
-            model.save(weights_filename)
+            model.save_weights(weights_filename)
             saved = "SAVED"
 
         target_loss, target_mse = model.evaluate(target_x_test, target_y_test, batch_size=32, verbose=0)
