@@ -16,7 +16,7 @@ import utilMetrics
 
 # ----------------------------------------------------------------------------
 def get_dann_weights_filename(folder, from_dataset, to_dataset, config):
-    return '{}{}/weights_dannCONV_model_from_{}_to_{}_w{}_s{}_l{}_f{}_k{}_drop{}_page{}_e{}_b{}_lda{}.npy'.format(
+    return '{}{}/weights_dannCONV_model_from_{}_to_{}_w{}_s{}_l{}_f{}_k{}_drop{}_page{}_e{}_b{}_lda{}_lda_inc{}.npy'.format(
                             folder,
                             ('/truncated' if config.truncate else ''),
                             from_dataset, to_dataset,
@@ -25,7 +25,8 @@ def get_dann_weights_filename(folder, from_dataset, to_dataset, config):
                             config.nb_filters, config.k_size,
                             '_drop'+str(config.dropout) if config.dropout > 0 else '',
                             str(config.page), str(config.epochs),
-                            str(config.batch), str(config.lda))
+                            str(config.batch), 
+                            str(config.lda), str(config.lda_inc))
 
 
 def get_dann_logs_filename(folder, from_dataset, to_dataset, config):
@@ -143,7 +144,9 @@ def train_dann_batch(dann_model, src_generator, target_genenerator, target_x_tra
 # ----------------------------------------------------------------------------
 def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_test, source_y_test,
                                                  target_x_train, target_y_train, target_x_test, target_y_test,
-                                                nb_epochs, batch_size, weights_filename, tensorboard):
+                                                nb_epochs, batch_size, 
+                                                lda_inc,
+                                                weights_filename, tensorboard):
     best_label_f1 = -1
     target_genenerator = batch_generator(target_x_train, None, batch_size=batch_size // 2)
 
@@ -155,6 +158,15 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
         
         return result
 
+    def write_log(callback, names, logs, batch_no):
+        for name, value in zip(names, logs):
+            summary = tf.Summary()
+            summary_value = summary.value.add()
+            summary_value.simple_value = value
+            summary_value.tag = name
+            callback.writer.add_summary(summary, batch_no)
+            callback.writer.flush()
+
     for e in range(nb_epochs):
         src_generator = batch_generator(source_x_train, source_y_train, batch_size=batch_size // 2)
 
@@ -165,12 +177,13 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
             lr = float(K.get_value(dann_builder.opt.lr))* (1. / (1. + float(K.get_value(dann_builder.opt.decay)) * float(K.get_value(dann_builder.opt.iterations)) ))
         print(' - Lr:', lr, ' / Lambda:', dann_builder.grl_layer.get_hp_lambda())
 
-        dann_builder.grl_layer.increment_hp_lambda_by(1e-4)      #1e-6  1e-4)  # !!!  ### NEW MODEL ####
+        dann_builder.grl_layer.increment_hp_lambda_by(lda_inc)
 
         # Train batch
-        loss, domain_loss, label_loss, domain_acc, label_mse = train_dann_batch(
+        logs = train_dann_batch(
                                             dann_builder.dann_model, src_generator, target_genenerator, target_x_train, batch_size )
 
+        loss, domain_loss, label_loss, domain_acc, label_mse = logs
         source_prediction = dann_builder.label_model.predict(source_x_train, batch_size=32, verbose=0)
         source_f1, source_th = utilMetrics.calculate_best_fm(source_prediction, source_y_train)
 
@@ -192,7 +205,8 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
                             e+1, nb_epochs, label_loss, label_mse, source_f1, domain_loss, domain_acc, target_loss, target_mse, target_f1, saved))
 
         tensorboard.on_epoch_end(e, named_logs(source_f1=source_f1, target_f1=target_f1, hp_lambda=dann_builder.grl_layer.get_hp_lambda()))
-
+        train_names = ['train_loss', 'train_mse']
+        write_log(tensorboard, train_names, logs, e)
 
         """
         sample_images(
@@ -252,5 +266,7 @@ def train_dann(dann_builder, source, target,
 
             __train_dann_page(dann_builder, source_x_train, source_y_train, source['x_test'], source['y_test'],
                                                     target_x_train, target_y_train, target['x_test'], target['y_test'],
-                                                    config.epochs, config.batch, weights_filename, tensorboard)
+                                                    config.epochs, config.batch, 
+                                                    config.lda_inc,
+                                                    weights_filename, tensorboard)
 

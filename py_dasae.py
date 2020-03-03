@@ -74,6 +74,7 @@ def menu():
     parser.add_argument('-drop',   default=0,        dest='dropout',          type=float, help='dropout value')
 
     parser.add_argument('-lda',      default=0.001,    type=float,    help='Reversal gradient lambda')
+    parser.add_argument('-lda_inc',  default=0.001,    type=float,    help='Reversal gradient lambda increment per epoch')
     parser.add_argument('-page',   default=-1,      type=int,   help='Page size to divide the training set. -1 to load all')
     parser.add_argument('-super',  default=1,      dest='nb_super_epoch',      type=int,   help='nb_super_epoch')
     parser.add_argument('-th',         default=-1,     dest='threshold',           type=float, help='threshold. -1 to test from 0 to 1')
