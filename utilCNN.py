@@ -98,14 +98,17 @@ def train_cnn_batch(model, train_generator, batch_size):
 
 # ----------------------------------------------------------------------------
 def __train_cnn_page(model, source_x_train, source_y_train, source_x_test, source_y_test,
+                                                target_x_train, target_y_train,
                                                 target_x_test, target_y_test,
                                                 nb_epochs, batch_size, weights_filename, tensorboard):
     best_label_f1 = -1
 
-    def named_logs(source_f1, target_f1):
+    def named_logs(source_f1_train, source_f1_test, target_f1_train, target_f1_test):
         result = {}
-        result["source_f1"] = source_f1
-        result["target_f1"] = target_f1
+        result["source_f1_train"] = source_f1_train
+        result["source_f1_test"] = source_f1_test
+        result["target_f1_train"] = target_f1_train
+        result["target_f1_test"] = target_f1_test
         return result
 
     for e in range(nb_epochs):
@@ -114,24 +117,34 @@ def __train_cnn_page(model, source_x_train, source_y_train, source_x_test, sourc
         # Train batch
         loss, label_mse = train_cnn_batch(model, src_generator, batch_size)
 
-        source_prediction = model.predict(source_x_train, batch_size=32, verbose=0)
-        source_f1, source_th = utilMetrics.calculate_best_fm(source_prediction, source_y_train)
+        source_prediction_train = model.predict(source_x_train, batch_size=32, verbose=0)
+        source_f1_train, source_th_train = utilMetrics.calculate_best_fm(source_prediction_train, source_y_train)
+        
+        source_prediction_test = model.predict(source_x_test, batch_size=32, verbose=0)
+        source_f1_test, source_th_test = utilMetrics.calculate_best_fm(source_prediction_test, source_y_test)
+
+        target_prediction_train = model.predict(target_x_train, batch_size=32, verbose=0)
+        target_f1_train, target_th_train = utilMetrics.calculate_best_fm(target_prediction_train, target_y_train)
+        
+        target_prediction_test = model.predict(target_x_test, batch_size=32, verbose=0)
+        target_f1_test, target_th_test = utilMetrics.calculate_best_fm(target_prediction_test, target_y_test)
 
         saved = ""
-        if source_f1 >= best_label_f1:
-            best_label_f1 = source_f1
+        if source_f1_test >= best_label_f1:
+            best_label_f1 = source_f1_test
             model.save_weights(weights_filename)
             saved = "SAVED"
 
         target_loss, target_mse = model.evaluate(target_x_test, target_y_test, batch_size=32, verbose=0)
 
-        y_pred = model.predict(target_x_test, batch_size=32, verbose=0)
-        target_f1, target_th = utilMetrics.calculate_best_fm(y_pred, target_y_test)
-
         print("Epoch [{}/{}]: source label mse={:.4f}, f1={:.4f} | target label loss={:.4f}, mse={:.4f}, f1={:.4f} | {}".format(
-                            e+1, nb_epochs, label_mse, source_f1, target_loss, target_mse, target_f1, saved))
+                            e+1, nb_epochs, label_mse, source_f1_test, target_loss, target_mse, target_f1_test, saved))
 
-        tensorboard.on_epoch_end(e, named_logs(source_f1=source_f1, target_f1=target_f1))
+        tensorboard.on_epoch_end(e, named_logs(
+                                source_f1_train=source_f1_train, 
+                                source_f1_test=source_f1_test,
+                                target_f1_train=target_f1_train, 
+                                target_f1_test=target_f1_test))
 
         """
         sample_images(
@@ -180,7 +193,15 @@ def train_cnn(model, source, target,
             #print(source_x_train.shape)
             #print(source_y_train.shape)
 
+            try:
+                target_x_train, target_y_train = next(target['generator'])
+            except: # Restart...
+                target['generator'].reset()
+                target['generator'].shuffle()
+                target_x_train, target_y_train = next(target['generator'])
+
             __train_cnn_page(model, source_x_train, source_y_train, source['x_test'], source['y_test'],
+                                                    target_x_train, target_y_train,
                                                     target['x_test'], target['y_test'],
                                                     config.epochs, config.batch, weights_filename, tensorboard)
 

@@ -150,22 +150,14 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
     best_label_f1 = -1
     target_genenerator = batch_generator(target_x_train, None, batch_size=batch_size // 2)
 
-    def named_logs(source_f1, target_f1, hp_lambda):
+    def named_logs(source_f1_train, source_f1_test, target_f1_train, target_f1_test, hp_lambda):
         result = {}
-        result["source_f1"] = source_f1
-        result["target_f1"] = target_f1
+        result["source_f1_train"] = source_f1_train
+        result["source_f1_test"] = source_f1_test
+        result["target_f1_train"] = target_f1_train
+        result["target_f1_test"] = target_f1_test
         result["lambda"] = hp_lambda
-        
         return result
-
-    def write_log(callback, names, logs, batch_no):
-        for name, value in zip(names, logs):
-            summary = tf.Summary()
-            summary_value = summary.value.add()
-            summary_value.simple_value = value
-            summary_value.tag = name
-            callback.writer.add_summary(summary, batch_no)
-            callback.writer.flush()
 
     for e in range(nb_epochs):
         src_generator = batch_generator(source_x_train, source_y_train, batch_size=batch_size // 2)
@@ -184,29 +176,39 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
                                             dann_builder.dann_model, src_generator, target_genenerator, target_x_train, batch_size )
 
         loss, domain_loss, label_loss, domain_acc, label_mse = logs
-        source_prediction = dann_builder.label_model.predict(source_x_train, batch_size=32, verbose=0)
-        source_f1, source_th = utilMetrics.calculate_best_fm(source_prediction, source_y_train)
+
+        source_prediction_train = dann_builder.label_model.predict(source_x_train, batch_size=32, verbose=0)
+        source_f1_train, source_th_train = utilMetrics.calculate_best_fm(source_prediction_train, source_y_train)
+
+        source_prediction_test = dann_builder.label_model.predict(source_x_test, batch_size=32, verbose=0)
+        source_f1_test, source_th_test = utilMetrics.calculate_best_fm(source_prediction_test, source_y_test)
+
+        target_prediction_train = dann_builder.label_model.predict(target_x_train, batch_size=32, verbose=0)
+        target_f1_train, target_th_train = utilMetrics.calculate_best_fm(target_prediction_train, target_y_train)
+
+        target_prediction_test = dann_builder.label_model.predict(target_x_test, batch_size=32, verbose=0)
+        target_f1_test, target_th_test = utilMetrics.calculate_best_fm(target_prediction_test, target_y_test)
 
         saved = ""
-        if source_f1 >= best_label_f1:
-            best_label_f1 = source_f1
+        if source_f1_test >= best_label_f1:
+            best_label_f1 = source_f1_test
             dann_builder.save(weights_filename)
             saved = "SAVED"
 
         #target_loss, target_mse = dann_builder.label_model.evaluate(target_x_train, target_y_train, batch_size=32, verbose=0)
         target_loss, target_mse = dann_builder.label_model.evaluate(target_x_test, target_y_test, batch_size=32, verbose=0)
 
-        y_pred = dann_builder.label_model.predict(target_x_test, batch_size=32, verbose=0)
-        target_f1, target_th = utilMetrics.calculate_best_fm(y_pred, target_y_test)
-
         #print("Epoch [{}/{}]: source label loss={:.4f}, mse={:.4f} | domain loss={:.4f}, acc={:.4f} | target label loss={:.4f}, mse={:.4f} | {}".format(
         #                    e+1, nb_epochs, label_loss, label_mse, domain_loss, domain_acc, target_loss, target_mse, saved))
         print("Epoch [{}/{}]: source label loss={:.4f}, mse={:.4f}, f1={:.4f} | domain loss={:.4f}, acc={:.4f} | target label loss={:.4f}, mse={:.4f}, f1={:.4f} | {}".format(
-                            e+1, nb_epochs, label_loss, label_mse, source_f1, domain_loss, domain_acc, target_loss, target_mse, target_f1, saved))
+                            e+1, nb_epochs, label_loss, label_mse, source_f1_train, domain_loss, domain_acc, target_loss, target_mse, target_f1_test, saved))
 
-        tensorboard.on_epoch_end(e, named_logs(source_f1=source_f1, target_f1=target_f1, hp_lambda=dann_builder.grl_layer.get_hp_lambda()))
-        train_names = ['train_loss', 'train_mse']
-        write_log(tensorboard, train_names, logs, e)
+        tensorboard.on_epoch_end(e, named_logs(
+                                source_f1_train=source_f1_train, 
+                                source_f1_test=source_f1_test, 
+                                target_f1_train=target_f1_train, 
+                                target_f1_test=target_f1_test,
+                                hp_lambda=dann_builder.grl_layer.get_hp_lambda()))
 
         """
         sample_images(
