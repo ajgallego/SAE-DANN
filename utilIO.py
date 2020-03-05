@@ -4,7 +4,10 @@ import util
 import numpy as np
 
 ARRAY_DBS =['dibco2016','dibco2014','palm0','palm1','phi','ein','sal','voy','bdi','all',
-            'dibco2016-ic','dibco2014-ic','palm0-ic','palm1-ic','phi-ic','ein-ic','sal-ic','voy-ic','bdi-ic','all-ic']
+            'dibco2016-ic','dibco2014-ic','palm0-ic','palm1-ic','phi-ic','ein-ic','sal-ic','voy-ic','bdi-ic','all-ic',
+            'sal-oe10',
+            'sal-oe0.4',
+            'sal-blur30x30']
 
 
 # -----------------------------------------------------------------------------
@@ -68,9 +71,17 @@ def load_folds_names(dbname):
     SALZINNES_train = ['Salzinnes/train/sal_GR']
     SALZINNES_test = ['Salzinnes/test/sal_GR']
 
+    SALZINNES_train_synthetic_overexposure10 = ['synthetic/overexposure_g10/Salzinnes/train/sal_GR']
+    SALZINNES_test_synthetic_overexposure10 = ['synthetic/overexposure_g10/Salzinnes/test/sal_GR']
+
+    SALZINNES_train_synthetic_overexposure0_4 = ['synthetic/overexposure_g0.4/Salzinnes/train/sal_GR']
+    SALZINNES_test_synthetic_overexposure0_4 = ['synthetic/overexposure_g0.4/Salzinnes/test/sal_GR']
+
+    SALZINNES_train_synthetic_blur30x30 = ['synthetic/blur_30x30/Salzinnes/train/sal_GR']
+    SALZINNES_test_synthetic_blur30x30 = ['synthetic/blur_30x30/Salzinnes/test/sal_GR']
+    
     SALZINNES_train_synthetic_inv_col = ['synthetic/inv_col/Salzinnes/train/sal_GR']
     SALZINNES_test_synthetic_inv_col = ['synthetic/inv_col/Salzinnes/test/sal_GR']
-    
 
     VOYNICH_test = ['Voynich/voy_GR']
     VOYNICH_test_synthetic_inv_col = ['synthetic/inv_col/Voynich/voy_GR']
@@ -128,6 +139,15 @@ def load_folds_names(dbname):
     elif dbname == 'sal-ic':
         train_folds = SALZINNES_train_synthetic_inv_col
         test_folds = SALZINNES_test_synthetic_inv_col
+    elif dbname == 'sal-oe10':
+        train_folds = SALZINNES_train_synthetic_overexposure10
+        test_folds = SALZINNES_test_synthetic_overexposure10
+    elif dbname == 'sal-oe0.4':
+        train_folds = SALZINNES_train_synthetic_overexposure0_4
+        test_folds = SALZINNES_test_synthetic_overexposure0_4
+    elif dbname == 'sal-blur30x30':
+        train_folds = SALZINNES_train_synthetic_blur30x30
+        test_folds = SALZINNES_test_synthetic_blur30x30
     elif dbname == 'voy':
         train_folds = [val for sublist in DIBCO for val in sublist]
         test_folds = VOYNICH_test
