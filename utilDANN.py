@@ -23,65 +23,16 @@ def get_dann_weights_filename(folder, from_dataset, to_dataset, config):
                             config.window, config.step,
                             config.nb_layers,
                             config.nb_filters, config.k_size,
-                            '_drop'+str(config.dropout) if config.dropout > 0 else '',
+                            str(config.dropout),
                             str(config.page), str(config.epochs),
-                            str(config.batch), 
+                            str(config.batch),
                             str(config.lda), str(config.lda_inc))
 
 
+# ----------------------------------------------------------------------------
 def get_dann_logs_filename(folder, from_dataset, to_dataset, config):
     weights_filename = get_dann_weights_filename(folder, from_dataset, to_dataset, config)
     return weights_filename.replace("/weights_dann", "/logs_dann")
-
-"""
-# ----------------------------------------------------------------------------
-def sample_images(self, is_testing, imgs_source, labels_source, imgs_target, labels_target, binarized_imgs, model_config, mean_training_imgs, std_training_imgs, epoch = None):
-        r, c = 10, 8
-
-        binarized_img3D = np.zeros((16, self.img_rows, self.img_cols, self.channels))
-        labels_target_img3D = np.zeros((16, self.img_rows, self.img_cols, self.channels))
-        labels_source_img3D = np.zeros((16, self.img_rows, self.img_cols, self.channels))
-        idx = 0
-
-        denorm_imgs_source = model_config.applyDeNormalization(imgs_source[0:16], mean_training_imgs, std_training_imgs)
-        denorm_imgs_target = model_config.applyDeNormalization(imgs_target[0:16], mean_training_imgs, std_training_imgs)
-        denorm_binarized_imgs = (1-binarized_imgs[0:16,:,:]) * 255
-        denorm_labels_target = (1-labels_target[0:16,:,:]) * 255
-        denorm_labels_source = (1-labels_source[0:16,:,:]) * 255
-
-        for channel in range(self.channels):
-            binarized_img3D[:,:,:,channel] = denorm_binarized_imgs.astype(np.uint8)
-            labels_target_img3D[:,:,:,channel] = denorm_labels_target.astype(np.uint8)
-            labels_source_img3D[:,:,:,channel] = denorm_labels_source.astype(np.uint8)
-            idx = idx + 1
-
-        gen_imgs = np.concatenate([denorm_imgs_source, labels_source_img3D, denorm_imgs_target, labels_target_img3D, binarized_img3D])
-        gen_imgs = gen_imgs.astype(np.uint8)
-
-        #titles = ['Original', 'Translated']
-        fig, axs = plt.subplots(r, c)
-        cnt = 0
-        for i in range(r):
-            for j in range(c):
-                im = gen_imgs[cnt,:,:,:]
-                axs[i,j].imshow(cv2.cvtColor(im, cv2.COLOR_BGR2RGB))
-                #axs[i, j].set_title(titles[i])
-                axs[i,j].axis('off')
-                cnt += 1
-
-        if is_testing:
-            pathdir = self.pathdir_testing_images.replace(".", "-")
-        else:
-            pathdir = self.pathdir_training_images.replace(".", "-")
-
-        util.mkdirp(pathdir)
-
-        if (epoch is None):
-            fig.savefig("%s/SAE.png" % (pathdir))
-        else:
-            fig.savefig("%s/%d.png" % (pathdir, epoch))
-        plt.close()
-"""
 
 
 # ----------------------------------------------------------------------------
@@ -144,7 +95,7 @@ def train_dann_batch(dann_model, src_generator, target_genenerator, target_x_tra
 # ----------------------------------------------------------------------------
 def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_test, source_y_test,
                                                  target_x_train, target_y_train, target_x_test, target_y_test,
-                                                nb_epochs, batch_size, 
+                                                nb_epochs, batch_size,
                                                 lda_inc,
                                                 weights_filename, tensorboard):
     best_label_f1 = -1
@@ -204,24 +155,11 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
                             e+1, nb_epochs, label_loss, label_mse, source_f1_train, domain_loss, domain_acc, target_loss, target_mse, target_f1_test, saved))
 
         tensorboard.on_epoch_end(e, named_logs(
-                                source_f1_train=source_f1_train, 
-                                source_f1_test=source_f1_test, 
-                                target_f1_train=target_f1_train, 
+                                source_f1_train=source_f1_train,
+                                source_f1_test=source_f1_test,
+                                target_f1_train=target_f1_train,
                                 target_f1_test=target_f1_test,
                                 hp_lambda=dann_builder.grl_layer.get_hp_lambda()))
-
-        """
-        sample_images(
-                                is_testing=False,
-                                imgs_source=X_source_val[0:16],
-                                labels_source=Y_source_val_16[0:16],
-                                imgs_target=X_target_val[0:16],
-                                labels_target=Y_target_val_16[0:16],
-                                binarized_imgs=pred_binarized_target_val_argmax_16[0:16],
-                                model_config=model_config,
-                                mean_training_imgs=mean_training_imgs, std_training_imgs=std_training_imgs,
-                                epoch = epoch)
-        """
 
         gc.collect()
 
@@ -268,7 +206,7 @@ def train_dann(dann_builder, source, target,
 
             __train_dann_page(dann_builder, source_x_train, source_y_train, source['x_test'], source['y_test'],
                                                     target_x_train, target_y_train, target['x_test'], target['y_test'],
-                                                    config.epochs, config.batch, 
+                                                    config.epochs, config.batch,
                                                     config.lda_inc,
                                                     weights_filename, tensorboard)
 

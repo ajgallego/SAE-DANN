@@ -87,7 +87,6 @@ def batch_generator(x_data, y_data=None, batch_size=1, shuffle_data=True):
 
 # ----------------------------------------------------------------------------
 def train_cnn_batch(model, train_generator, batch_size):
-
     for batchXs, batchYs in train_generator:
         result = model.train_on_batch(batchXs, batchYs)
 
@@ -119,13 +118,13 @@ def __train_cnn_page(model, source_x_train, source_y_train, source_x_test, sourc
 
         source_prediction_train = model.predict(source_x_train, batch_size=32, verbose=0)
         source_f1_train, source_th_train = utilMetrics.calculate_best_fm(source_prediction_train, source_y_train)
-        
+
         source_prediction_test = model.predict(source_x_test, batch_size=32, verbose=0)
         source_f1_test, source_th_test = utilMetrics.calculate_best_fm(source_prediction_test, source_y_test)
 
         target_prediction_train = model.predict(target_x_train, batch_size=32, verbose=0)
         target_f1_train, target_th_train = utilMetrics.calculate_best_fm(target_prediction_train, target_y_train)
-        
+
         target_prediction_test = model.predict(target_x_test, batch_size=32, verbose=0)
         target_f1_test, target_th_test = utilMetrics.calculate_best_fm(target_prediction_test, target_y_test)
 
@@ -141,9 +140,9 @@ def __train_cnn_page(model, source_x_train, source_y_train, source_x_test, sourc
                             e+1, nb_epochs, label_mse, source_f1_test, target_loss, target_mse, target_f1_test, saved))
 
         tensorboard.on_epoch_end(e, named_logs(
-                                source_f1_train=source_f1_train, 
+                                source_f1_train=source_f1_train,
                                 source_f1_test=source_f1_test,
-                                target_f1_train=target_f1_train, 
+                                target_f1_train=target_f1_train,
                                 target_f1_test=target_f1_test))
 
         """

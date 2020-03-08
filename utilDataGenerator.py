@@ -6,17 +6,18 @@ import math
 import cv2
 import numpy as np
 import gc
+import utilConst
 
 
 SHOW_IMAGES = False
 
 
 # ----------------------------------------------------------------------------
-def load_files(array_x_files, x_sufix, y_sufix):
+def load_files(array_x_files):
     x_data = []
     y_data = []
     for fname_x in array_x_files:
-        fname_y = fname_x.replace(x_sufix, y_sufix)
+        fname_y = fname_x.replace(utilConst.X_SUFIX, utilConst.Y_SUFIX)
         img_x = cv2.imread(fname_x, cv2.IMREAD_GRAYSCALE)
         img_y = cv2.imread(fname_y, cv2.IMREAD_GRAYSCALE)
         x_data.append(img_x)
@@ -86,12 +87,12 @@ def normalize_data( x_data, norm_type ):
 
 
 # ----------------------------------------------------------------------------
-def generate_chunks(array_x_files, x_sufix, y_sufix, window_size, step_size):
+def generate_chunks(array_x_files, window_size, step_size):
     x_data = []
     y_data = []
 
     for fname_x in array_x_files:
-        fname_y = fname_x.replace(x_sufix, y_sufix)
+        fname_y = fname_x.replace(utilConst.X_SUFIX, utilConst.Y_SUFIX)
         img_x = cv2.imread(fname_x, cv2.IMREAD_GRAYSCALE)
         img_y = cv2.imread(fname_y, cv2.IMREAD_GRAYSCALE)
         assert img_x is not None and img_y is not None
@@ -157,10 +158,8 @@ def generate_chunks(array_x_files, x_sufix, y_sufix, window_size, step_size):
 
 # ----------------------------------------------------------------------------
 class LazyFileLoader:
-   def __init__(self, array_x_files, x_sufix, y_sufix, page_size):
+   def __init__(self, array_x_files, page_size):
       self.array_x_files = array_x_files
-      self.x_sufix = x_sufix
-      self.y_sufix = y_sufix
       self.pos = 0
       if page_size <= 0:
           self.page_size = len(array_x_files)
@@ -203,7 +202,7 @@ class LazyFileLoader:
                psize = len(self.array_x_files) - self.pos
 
        print('> Loading page from', self.pos, 'to', self.pos + psize, '...')
-       X_data, Y_data = load_files(self.array_x_files[self.pos:self.pos + psize], self.x_sufix, self.y_sufix)
+       X_data, Y_data = load_files(self.array_x_files[self.pos:self.pos + psize])
        self.pos += self.page_size
 
        return X_data, Y_data
@@ -211,8 +210,8 @@ class LazyFileLoader:
 
 # ----------------------------------------------------------------------------
 class LazyChunkGenerator(LazyFileLoader):
-   def __init__(self, array_x_files, x_sufix, y_sufix, page_size, window_size, step_size):
-      LazyFileLoader.__init__(self, array_x_files, x_sufix, y_sufix, page_size)
+   def __init__(self, array_x_files, page_size, window_size, step_size):
+      LazyFileLoader.__init__(self, array_x_files, page_size)
       self.window_size = window_size
       self.step_size = step_size
 
@@ -227,7 +226,6 @@ class LazyChunkGenerator(LazyFileLoader):
        print('> Loading page from', self.pos, 'to', self.pos + psize, '...')
        gc.collect()
        X_data, Y_data = generate_chunks(self.array_x_files[self.pos:self.pos + psize],
-                                                                               self.x_sufix, self.y_sufix,
                                                                                self.window_size, self.step_size)
        self.pos += self.page_size
 

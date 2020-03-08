@@ -1,14 +1,10 @@
 #!/bin/bash
 
-#python -u py_dasae.py -path datasets -db1 sal -db2 dibco2016 -s 128 -l 5 -f 128 -gpu 0
-#python -u py_dasae.py -path datasets -db1 dibco2016 -db2 palm0
-#exit
-
 gpu=0
 
 type=dann			# dann cnn
 source=sal			# 'dibco2016','dibco2014','palm0','palm1','phi','ein','sal','voy','bdi','all'
-target=dibco2016    
+target=dibco2016
 window=256
 step=120				#	-1  120
 layers=5
@@ -21,14 +17,14 @@ page=-1
 lda=0.00001			# 0.01  0.001	0.0001	0.00001
 lda_inc=0.0001			#increment of lambda in each epoch
 #lr=0.5				# 0.5  1.0
-options=			#--test  --truncate
+options=	#"--test --save"			#--test  --truncate --save
 
 python -u py_dasae.py -type ${type} \
 				-path datasets -db1 ${source} -db2 ${target} \
 				-w ${window} -s ${step} \
 				-l ${layers} -f ${filters} -k ${kernel} -drop ${drop} \
 				-lda ${lda} \
-                		-lda_inc ${lda_inc} \
+                -lda_inc ${lda_inc} \
 				-e ${e} -b ${b} -page ${page} \
 				-gpu ${gpu} \
 				${options} \

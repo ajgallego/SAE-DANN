@@ -8,11 +8,11 @@ os.environ['CUDA_VISIBLE_DEVICES']=gpu
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Disable Tensorflow CUDA load statements
 warnings.filterwarnings('ignore')
 
-import cv2
 import os
 import argparse
 import numpy as np
 import util
+import utilConst
 import utilIO
 import utilMetrics
 import utilDataGenerator
@@ -43,16 +43,8 @@ if K.backend() == 'tensorflow':
     K.set_session(sess)
 
 
-x_sufix = '_GR'
-y_sufix = '_GT'
-WEIGHTS_CNN_FOLDERNAME = 'WEIGHTS_CNN'
-WEIGHTS_DANN_FOLDERNAME = 'WEIGHTS_DANN'
-
-LOGS_CNN_FOLDERNAME = 'LOGS_CNN'
-LOGS_DANN_FOLDERNAME = 'LOGS_DANN'
-
-util.mkdirp( WEIGHTS_CNN_FOLDERNAME + '/truncated')
-util.mkdirp( WEIGHTS_DANN_FOLDERNAME + '/truncated')
+util.mkdirp( utilConst.WEIGHTS_CNN_FOLDERNAME + '/truncated')
+util.mkdirp( utilConst.WEIGHTS_DANN_FOLDERNAME + '/truncated')
 
 
 # ----------------------------------------------------------------------------
@@ -61,8 +53,8 @@ def menu():
     parser.add_argument('-type',   default='dann', type=str,     choices=['dann', 'cnn'],  help='Training type')
 
     parser.add_argument('-path',  required=True,   help='base path to datasets')
-    parser.add_argument('-db1',       required=True,  choices=utilIO.ARRAY_DBS, help='Database name')
-    parser.add_argument('-db2',       required=True,  choices=utilIO.ARRAY_DBS, help='Database name')
+    parser.add_argument('-db1',       required=True,  choices=utilConst.ARRAY_DBS, help='Database name')
+    parser.add_argument('-db2',       required=True,  choices=utilConst.ARRAY_DBS, help='Database name')
 
     parser.add_argument('--aug',   action='store_true', help='Load augmentation folders')
     parser.add_argument('-w',          default=256,    dest='window',           type=int,   help='window size')
@@ -101,75 +93,6 @@ def menu():
 
 
 # ----------------------------------------------------------------------------
-def save_images(model, array_files_to_save, config):
-    assert config.threshold != -1
-
-    array_files = utilIO.load_array_of_files(config.path, array_files_to_save)
-
-    for fname in array_files:
-        print('Processing image', fname)
-
-        img = cv2.imread(fname, cv2.IMREAD_GRAYSCALE)
-        #img = np.asarray(img)
-
-        rows = img.shape[0]
-        cols = img.shape[1]
-        if img.shape[0] < config.window or img.shape[1] < config.window:
-            new_rows = config.window if img.shape[0] < config.window else img.shape[0]
-            new_cols = config.window if img.shape[1] < config.window else img.shape[1]
-            img = cv2.resize(img, (new_cols, new_rows), interpolation = cv2.INTER_CUBIC)
-
-        #cv2.imshow("img", img)
-        #cv2.waitKey(0)
-
-        #img = np.asarray(img).astype('float32')
-
-        finalImg = np.zeros(img.shape, dtype=bool)
-
-        for (x, y, window) in utilDataGenerator.sliding_window(img, stepSize=config.step, windowSize=(config.window, config.window)):
-            if window.shape[0] != config.window or window.shape[1] != config.window:
-                continue
-
-            roi = img[y:(y + config.window), x:(x + config.window)].copy()
-
-            #cv2.imshow("roi", roi)
-            #cv2.waitKey(0)
-
-            roi = roi.reshape(1, config.window, config.window, 1)
-            roi = roi.astype('float32')
-            norm_type = '255'
-            roi = utilDataGenerator.normalize_data( roi, norm_type )
-
-            prediction = model.predict(roi)
-
-            prediction = (prediction > config.threshold)
-
-            finalImg[y:(y + config.window), x:(x + config.window)] = prediction[0].reshape(config.window, config.window)
-
-            #cv2.imshow("finalImg", (1 - finalImg.astype('uint8')) * 255 )
-            #cv2.waitKey(0)
-
-        finalImg = 1 - finalImg
-        finalImg *= 255
-        finalImg = finalImg.astype('uint8')
-
-        if finalImg.shape[0] != rows or finalImg.shape[1] != cols:
-            finalImg = cv2.resize(finalImg, (cols, rows), interpolation = cv2.INTER_CUBIC)
-
-        outFilename = fname.replace('_GR/', '_PREDICTION' + config.modelpath + '/')
-        outFilename = outFilename.replace(config.path, 'OUTPUT')
-        outFilename = outFilename.replace('.h5', '').replace('.npy', '')
-        outFilename = outFilename.replace(WEIGHTS_DANN_FOLDERNAME, '')
-        outFilename = outFilename.replace(WEIGHTS_CNN_FOLDERNAME, '')
-        outFilename = outFilename.replace(LOGS_DANN_FOLDERNAME, '')
-        outFilename = outFilename.replace(LOGS_CNN_FOLDERNAME, '')
-
-        print(' - Saving image to:', outFilename)
-        util.mkdirp( os.path.dirname(outFilename) )
-        cv2.imwrite(outFilename, finalImg)
-
-
-# ----------------------------------------------------------------------------
 def load_data(path, db, window, step, page_size, is_test, truncate):
     print('Loading data...')
     train_folds, test_folds = utilIO.load_folds_names(db)
@@ -181,12 +104,12 @@ def load_data(path, db, window, step, page_size, is_test, truncate):
             train_folds.append( util.rreplace(f, "/", "/aug_", 1) )"""
 
     array_test_files = utilIO.load_array_of_files(path, test_folds, truncate)
-    x_test, y_test = utilDataGenerator.generate_chunks(array_test_files, x_sufix, y_sufix, window, window)
+    x_test, y_test = utilDataGenerator.generate_chunks(array_test_files, window, window)
 
     train_data_generator = None
     if is_test == False:
         array_train_files = utilIO.load_array_of_files(path, train_folds, truncate)
-        train_data_generator = utilDataGenerator.LazyChunkGenerator(array_train_files, x_sufix, y_sufix, page_size, window, step)
+        train_data_generator = utilDataGenerator.LazyChunkGenerator(array_train_files, page_size, window, step)
         train_data_generator.shuffle()
 
     print('DB: ', db)
@@ -201,30 +124,32 @@ def load_data(path, db, window, step, page_size, is_test, truncate):
 
 # -----------------------------------------------------------------------------
 def train_and_evaluate(datasets, input_shape, config):
-    summary = True
+    summary = config.type == 'dann'
     weights_filename = None
     dann = utilDANNModel.DANNModel(input_shape, config, summary)
 
     if config.type == 'dann':
-        weights_filename = utilDANN.get_dann_weights_filename( WEIGHTS_DANN_FOLDERNAME,
+        weights_filename = utilDANN.get_dann_weights_filename( utilConst.WEIGHTS_DANN_FOLDERNAME,
                                                                                                         datasets['source']['name'],
                                                                                                         datasets['target']['name'], config)
         if config.test == False:
             print('Train SAE DANN...')
             utilDANN.train_dann(dann, datasets['source'], datasets['target'],
                                                         weights_filename,
-                                                        LOGS_DANN_FOLDERNAME,
+                                                        utilConst.LOGS_DANN_FOLDERNAME,
                                                         config)
         else:
             dann.load( weights_filename )  # Load the last save weights...
 
     elif config.type == 'cnn':
             print('Train SAE (without DA)...')
-            weights_filename = utilCNN.get_cnn_weights_filename( WEIGHTS_CNN_FOLDERNAME, datasets['source']['name'], config)
+            print(dann.label_model.summary())
+            weights_filename = utilCNN.get_cnn_weights_filename( utilConst.WEIGHTS_CNN_FOLDERNAME,
+                                                                                                                    datasets['source']['name'], config)
 
             if config.test == False:
                 utilCNN.train_cnn(dann.label_model,  datasets['source'], datasets['target'],
-                                                        weights_filename, LOGS_CNN_FOLDERNAME, config)
+                                                        weights_filename, utilConst.LOGS_CNN_FOLDERNAME, config)
             else:
                 dann.label_model.load_weights(weights_filename)
     else:
@@ -249,7 +174,7 @@ def train_and_evaluate(datasets, input_shape, config):
         config.modelpath = weights_filename
         config.threshold = target_best_th
         _, target_test_folds = utilIO.load_folds_names(config.db2)
-        save_images(dann.label_model, target_test_folds, config)
+        utilIO.save_images(dann.label_model, target_test_folds, config)
 
 
 
