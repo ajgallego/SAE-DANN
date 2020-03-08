@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 import os
-import util
+import cv2
 import numpy as np
-
-ARRAY_DBS =['dibco2016','dibco2014','palm0','palm1','phi','ein','sal','voy','bdi','all',
-            'dibco2016-ic','dibco2014-ic','palm0-ic','palm1-ic','phi-ic','ein-ic','sal-ic','voy-ic','bdi-ic','all-ic',
-            'sal-oe10',
-            'sal-oe0.4',
-            'sal-blur30x30']
+import util
+import utilConst
+import utilDataGenerator
 
 
 # -----------------------------------------------------------------------------
@@ -28,7 +26,7 @@ def load_array_of_files(basepath, folders, truncate=False):
 
 # ----------------------------------------------------------------------------
 def load_folds_names(dbname):
-    assert dbname in ARRAY_DBS
+    assert dbname in utilConst.ARRAY_DBS
 
     train_folds = []
     test_folds = []
@@ -79,7 +77,7 @@ def load_folds_names(dbname):
 
     SALZINNES_train_synthetic_blur30x30 = ['synthetic/blur_30x30/Salzinnes/train/sal_GR']
     SALZINNES_test_synthetic_blur30x30 = ['synthetic/blur_30x30/Salzinnes/test/sal_GR']
-    
+
     SALZINNES_train_synthetic_inv_col = ['synthetic/inv_col/Salzinnes/train/sal_GR']
     SALZINNES_test_synthetic_inv_col = ['synthetic/inv_col/Salzinnes/test/sal_GR']
 
@@ -203,3 +201,111 @@ def load_folds_names(dbname):
 
     return train_folds, test_folds
 
+
+#------------------------------------------------------------------------------
+def __calculate_img_diff(img_pr, img_y):
+    assert img_pr is not None and img_y is not None
+    assert img_pr.shape == img_y.shape
+
+    img_diff = np.zeros((img_pr.shape[0], img_pr.shape[1], 3), np.uint8)
+
+    for f in xrange(img_pr.shape[0]):
+        for c in xrange(img_pr.shape[1]):
+            if img_pr[f,c] == img_y[f,c]:
+                img_diff[f,c] = (0,0,0) if img_y[f,c] == 0 else (255,255,255)
+            else:
+                img_diff[f,c] = (0,0,255) if img_y[f,c] == 0 else (255,0,0)
+
+    return img_diff
+
+
+# ----------------------------------------------------------------------------
+def save_images(model, array_files_to_save, config):
+    assert config.threshold != -1
+
+    PONDERATE = True
+
+    print('Saving images...')
+
+    array_files = load_array_of_files(config.path, array_files_to_save)
+
+    for fname in array_files:
+        print('Processing image', fname)
+
+        fname_gt = fname.replace(utilConst.X_SUFIX, utilConst.Y_SUFIX)
+        img = cv2.imread(fname, cv2.IMREAD_GRAYSCALE)
+        gt = cv2.imread(fname_gt, cv2.IMREAD_GRAYSCALE)
+
+        rows = img.shape[0]
+        cols = img.shape[1]
+        if img.shape[0] < config.window or img.shape[1] < config.window:
+            new_rows = config.window if img.shape[0] < config.window else img.shape[0]
+            new_cols = config.window if img.shape[1] < config.window else img.shape[1]
+            img = cv2.resize(img, (new_cols, new_rows), interpolation = cv2.INTER_CUBIC)
+
+        #cv2.imshow("img", img)
+        #cv2.waitKey(0)
+
+        if PONDERATE == False:
+            finalImg = np.zeros(img.shape, dtype=bool)
+        else:
+            finalImg = np.zeros(img.shape, dtype=float)
+        finalWeights = np.zeros(img.shape, dtype=float)
+
+        for (x, y, window) in utilDataGenerator.sliding_window(img, stepSize=config.step, windowSize=(config.window, config.window)):
+            if window.shape[0] != config.window or window.shape[1] != config.window:
+                continue
+
+            roi = img[y:(y + config.window), x:(x + config.window)].copy()
+
+            #cv2.imshow("roi", roi)
+            #cv2.waitKey(0)
+
+            roi = roi.reshape(1, config.window, config.window, 1)
+            roi = roi.astype('float32')
+            norm_type = '255'
+            roi = utilDataGenerator.normalize_data( roi, norm_type )
+
+            prediction = model.predict(roi)
+
+            if PONDERATE == False:  #SIN PONDERACIÓN
+                prediction = (prediction > config.threshold)
+                finalImg[y:(y + config.window), x:(x + config.window)] = prediction[0].reshape(config.window, config.window)
+            else:
+                # CON PONDERACIÓN
+                finalImg[y:(y + config.window), x:(x + config.window)] += prediction[0].reshape(config.window, config.window)
+                finalWeights[y:(y + config.window), x:(x + config.window)] += 1
+
+            #cv2.imshow("finalImg", (1 - finalImg.astype('uint8')) * 255 )
+            #cv2.waitKey(0)
+
+        if PONDERATE == True:
+            finalImg /=  finalWeights.astype('float32')
+            finalImg = (finalImg > config.threshold)
+
+        finalImg = 1 - finalImg.astype('uint8')
+        finalImg *= 255
+        #finalImg = finalImg.astype('uint8')
+
+        if finalImg.shape[0] != rows or finalImg.shape[1] != cols:
+            finalImg = cv2.resize(finalImg, (cols, rows), interpolation = cv2.INTER_CUBIC)
+
+        img_diff = __calculate_img_diff(finalImg, gt)
+
+        # Save image...
+        outFilename = fname.replace(config.path, 'OUTPUT')
+        outFilename = outFilename.replace(utilConst.X_SUFIX+'/', '/'+config.modelpath + '/')
+        outFilename = outFilename.replace(utilConst.WEIGHTS_DANN_FOLDERNAME+'/', '')
+        outFilename = outFilename.replace(utilConst.WEIGHTS_CNN_FOLDERNAME+'/', '')
+        outFilename = outFilename.replace(utilConst.LOGS_DANN_FOLDERNAME+'/', '')
+        outFilename = outFilename.replace(utilConst.LOGS_CNN_FOLDERNAME+'/', '')
+
+        outFilenamePred = outFilename.replace('.h5', '/OUT_PR').replace('.npy', '/OUT_PR')
+        outFilenameDiff = outFilename.replace('.h5', '/OUT_DIFF').replace('.npy', '/OUT_DIFF')
+
+        print(' - Saving predicted image to:', outFilenamePred)
+        print(' - Saving Diff image to:', outFilenameDiff)
+        util.mkdirp( os.path.dirname(outFilenamePred) )
+        util.mkdirp( os.path.dirname(outFilenameDiff) )
+        cv2.imwrite(outFilenamePred, finalImg)
+        cv2.imwrite(outFilenameDiff, img_diff)
