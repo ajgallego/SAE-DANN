@@ -14,3 +14,6 @@ out_*
 *.out
 *.pyc
 *~
+sh_run_experiment_bs_local.sh
+sh_run_experiment_local.sh
+sh_run_experiment_test_local.sh
