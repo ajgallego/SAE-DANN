@@ -34,6 +34,10 @@ def get_dann_logs_filename(folder, from_dataset, to_dataset, config):
     weights_filename = get_dann_weights_filename(folder, from_dataset, to_dataset, config)
     return weights_filename.replace("/weights_dann", "/logs_dann")
 
+# ----------------------------------------------------------------------------
+def get_dann_csv_logs_filename(folder, from_dataset, to_dataset, config):
+    weights_filename = get_dann_weights_filename(folder, from_dataset, to_dataset, config)
+    return weights_filename.replace("/weights_dann", "/csv_logs_dann")
 
 # ----------------------------------------------------------------------------
 def batch_generator(x_data, y_data=None, batch_size=1, shuffle_data=True):
@@ -97,7 +101,9 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
                                                  target_x_train, target_y_train, target_x_test, target_y_test,
                                                 nb_epochs, batch_size,
                                                 lda_inc,
-                                                weights_filename, tensorboard):
+                                                weights_filename, 
+                                                csv_logs_filename,
+                                                with_tensorboard, tensorboard):
     best_label_f1 = -1
     target_genenerator = batch_generator(target_x_train, None, batch_size=batch_size // 2)
 
@@ -109,6 +115,10 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
         result["target_f1_test"] = target_f1_test
         result["lambda"] = hp_lambda
         return result
+
+    csv_logs_file = open(csv_logs_filename,'a+')
+    csv_logs_file.write("#Epoch\tSRC_TRAIN\tTRG_TRAIN\tSRC_TEST\tTRG_TEST\tTRG_MSE\tTRG_LOSS\tLBL_MSE\tLBL_LOSS")
+    csv_logs_file.close()
 
     for e in range(nb_epochs):
         src_generator = batch_generator(source_x_train, source_y_train, batch_size=batch_size // 2)
@@ -154,35 +164,57 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
         print("Epoch [{}/{}]: source label loss={:.4f}, mse={:.4f}, f1={:.4f} | domain loss={:.4f}, acc={:.4f} | target label loss={:.4f}, mse={:.4f}, f1={:.4f} | {}".format(
                             e+1, nb_epochs, label_loss, label_mse, source_f1_train, domain_loss, domain_acc, target_loss, target_mse, target_f1_test, saved))
 
-        tensorboard.on_epoch_end(e, named_logs(
+        if with_tensorboard:
+            tensorboard.on_epoch_end(e, named_logs(
                                 source_f1_train=source_f1_train,
                                 source_f1_test=source_f1_test,
                                 target_f1_train=target_f1_train,
                                 target_f1_test=target_f1_test,
                                 hp_lambda=dann_builder.grl_layer.get_hp_lambda()))
 
+        csv_logs_file = open(csv_logs_filename,'a+')
+        csv_logs_file.write("%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f"%\
+                                (e,\
+                                source_f1_train,\
+                                target_f1_train,\
+                                source_f1_test,\
+                                target_f1_test,\
+                                target_mse,\
+                                target_loss,\
+                                label_mse,\
+                                label_loss\
+                                ))
+        csv_logs_file.close()
+        
         gc.collect()
 
 
 
 # ----------------------------------------------------------------------------
 def train_dann(dann_builder, source, target,
-                                    weights_filename, logs_directory, config):
+                                    weights_filename, logs_directory, csv_logs_directory,
+                                    config):
     print('Training DANN model...')
 
     dann_builder.grl_layer.set_hp_lambda(config.lda)
 
     logs_filename = get_dann_logs_filename( logs_directory, source['name'], target['name'], config)
-
     util.deleteFolder(logs_filename)
-    tensorboard = TensorBoard(
+
+    csv_logs_filename = get_dann_csv_logs_filename( logs_directory, source['name'], target['name'], config)
+    util.deleteFolder(logs_filename)
+
+    if config.tboard:
+        tensorboard = TensorBoard(
                 log_dir=logs_filename,
                 histogram_freq=0,
                 batch_size=config.batch,
                 write_graph=True,
                 write_grads=True
                 )
-    tensorboard.set_model(dann_builder.dann_model)
+        tensorboard.set_model(dann_builder.dann_model)
+    else:
+        tensorboard = None
 
     for se in range(config.nb_super_epoch):
         print(80 * "-")
@@ -208,5 +240,7 @@ def train_dann(dann_builder, source, target,
                                                     target_x_train, target_y_train, target['x_test'], target['y_test'],
                                                     config.epochs, config.batch,
                                                     config.lda_inc,
-                                                    weights_filename, tensorboard)
+                                                    weights_filename, 
+                                                    csv_logs_filename,
+                                                    config.tboard, tensorboard)
 
