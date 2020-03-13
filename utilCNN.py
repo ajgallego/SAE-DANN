@@ -16,7 +16,7 @@ import util
 
 # ----------------------------------------------------------------------------
 def get_cnn_weights_filename(folder, dataset_name, config):
-    return '{}{}/weights_cnn_model_{}_w{}_s{}_l{}_f{}_k{}_drop{}_page{}_e{}_b{}.npy'.format(
+    return '{}{}/weights_cnn_model_{}_w{}_s{}_l{}_f{}_k{}_drop{}_page{}_super{}_e{}_b{}.npy'.format(
                             folder,
                             ('/truncated' if config.truncate else ''),
                             dataset_name,
@@ -24,13 +24,18 @@ def get_cnn_weights_filename(folder, dataset_name, config):
                             config.nb_layers,
                             config.nb_filters, config.k_size,
                             '_drop'+str(config.dropout) if config.dropout > 0 else '',
-                            str(config.page), str(config.epochs),
-                            str(config.batch))
+                            str(config.page1),
+                            str(config.super), str(config.epochs), str(config.batch))
 
 
 # -------------------------------------------------------------------------
 def get_cnn_logs_directory(folder, from_dataset, to_dataset, config):
-    return '{}{}/logs_cnn_model_from_{}_to_{}_w{}_s{}_l{}_f{}_k{}_drop{}_page{}_e{}_b{}.npy'.format(
+    weights_filename = get_cnn_weights_filename(folder, from_dataset, config)
+    return weights_filename
+                        .replace('/weights_cnn_model_', '/logs_cnn_model_from_')
+                        .replace('_w', '_to'+to_dataset+'_w')
+
+    """return '{}{}/logs_cnn_model_from_{}_to_{}_w{}_s{}_l{}_f{}_k{}_drop{}_page{}_super{}_e{}_b{}.npy'.format(
                             folder,
                             ('/truncated' if config.truncate else ''),
                             from_dataset, to_dataset,
@@ -38,9 +43,11 @@ def get_cnn_logs_directory(folder, from_dataset, to_dataset, config):
                             config.nb_layers,
                             config.nb_filters, config.k_size,
                             '_drop'+str(config.dropout) if config.dropout > 0 else '',
-                            str(config.page), str(config.epochs),
-                            str(config.batch))
+                            str(config.page1),
+                            str(config.super), str(config.epochs), str(config.batch))"""
 
+
+# -------------------------------------------------------------------------
 def get_cnn_csv_logs_directory(folder, from_dataset, to_dataset, config):
     weights_filename = get_cnn_logs_directory(folder, from_dataset, to_dataset, config)
     return weights_filename.replace("/logs_cnn_model", "/csv_logs_cnn_model")
@@ -103,8 +110,8 @@ def train_cnn_batch(model, train_generator, batch_size):
 def __train_cnn_page(model, source_x_train, source_y_train, source_x_test, source_y_test,
                                                 target_x_train, target_y_train,
                                                 target_x_test, target_y_test,
-                                                nb_epochs, batch_size, 
-                                                weights_filename, 
+                                                nb_epochs, batch_size,
+                                                weights_filename,
                                                 csv_logs_directory,
                                                 page,
                                                 with_tensorboard, tensorboard):

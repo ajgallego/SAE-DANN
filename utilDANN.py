@@ -16,7 +16,7 @@ import utilMetrics
 
 # ----------------------------------------------------------------------------
 def get_dann_weights_filename(folder, from_dataset, to_dataset, config):
-    return '{}{}/weights_dannCONV_model_from_{}_to_{}_w{}_s{}_l{}_f{}_k{}_drop{}_page{}_e{}_b{}_lda{}_lda_inc{}.npy'.format(
+    return '{}{}/weights_dannCONV_model_from_{}_to_{}_w{}_s{}_l{}_f{}_k{}_drop{}_page1{}_page2{}_super{}_e{}_b{}_lda{}_lda_inc{}.npy'.format(
                             folder,
                             ('/truncated' if config.truncate else ''),
                             from_dataset, to_dataset,
@@ -24,10 +24,9 @@ def get_dann_weights_filename(folder, from_dataset, to_dataset, config):
                             config.nb_layers,
                             config.nb_filters, config.k_size,
                             str(config.dropout),
-                            str(config.page), str(config.epochs),
-                            str(config.batch),
+                            str(config.page1), str(config.page2),
+                            str(config.super), str(config.epochs), str(config.batch),
                             str(config.lda), str(config.lda_inc))
-
 
 # ----------------------------------------------------------------------------
 def get_dann_logs_directory(folder, from_dataset, to_dataset, config):
@@ -101,7 +100,7 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
                                                  target_x_train, target_y_train, target_x_test, target_y_test,
                                                 nb_epochs, batch_size,
                                                 lda_inc,
-                                                weights_filename, 
+                                                weights_filename,
                                                 csv_logs_directory,
                                                 page,
                                                 with_tensorboard, tensorboard):
@@ -189,7 +188,7 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
                                 dann_builder.grl_layer.get_hp_lambda()\
                                 ))
         csv_logs_file.close()
-        
+
         gc.collect()
 
 
@@ -246,7 +245,7 @@ def train_dann(dann_builder, source, target,
                                                     target_x_train, target_y_train, target['x_test'], target['y_test'],
                                                     config.epochs, config.batch,
                                                     config.lda_inc,
-                                                    weights_filename, 
+                                                    weights_filename,
                                                     csv_logs_directory,
                                                     page,
                                                     config.tboard, tensorboard)

@@ -158,13 +158,13 @@ def generate_chunks(array_x_files, window_size, step_size):
 
 # ----------------------------------------------------------------------------
 class LazyFileLoader:
-   def __init__(self, array_x_files, page_size):
+   def __init__(self, array_x_files, nb_pages):
       self.array_x_files = array_x_files
       self.pos = 0
-      if page_size <= 0:
+      if nb_pages <= 0:
           self.page_size = len(array_x_files)
       else:
-          self.page_size = page_size
+          self.page_size = len(array_x_files) / nb_pages
 
    def __len__(self):
        return len(self.array_x_files)
@@ -210,8 +210,8 @@ class LazyFileLoader:
 
 # ----------------------------------------------------------------------------
 class LazyChunkGenerator(LazyFileLoader):
-   def __init__(self, array_x_files, page_size, window_size, step_size):
-      LazyFileLoader.__init__(self, array_x_files, page_size)
+   def __init__(self, array_x_files, nb_pages, window_size, step_size):
+      LazyFileLoader.__init__(self, array_x_files, nb_pages)
       self.window_size = window_size
       self.step_size = step_size
 
