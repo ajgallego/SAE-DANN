@@ -24,8 +24,8 @@ def get_cnn_weights_filename(folder, dataset_name, config):
                             config.nb_layers,
                             config.nb_filters, config.k_size,
                             '_drop'+str(config.dropout) if config.dropout > 0 else '',
-                            str(config.page1),
-                            str(config.super), str(config.epochs), str(config.batch))
+                            str(config.page), str(config.nb_super_epoch),
+                            str(config.epochs), str(config.batch))
 
 
 # -------------------------------------------------------------------------
@@ -43,8 +43,8 @@ def get_cnn_logs_directory(folder, from_dataset, to_dataset, config):
                             config.nb_layers,
                             config.nb_filters, config.k_size,
                             '_drop'+str(config.dropout) if config.dropout > 0 else '',
-                            str(config.page1),
-                            str(config.super), str(config.epochs), str(config.batch))"""
+                            str(config.page), str(config.nb_super_epoch),
+                            str(config.epochs), str(config.batch))"""
 
 
 # -------------------------------------------------------------------------

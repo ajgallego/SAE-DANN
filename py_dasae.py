@@ -67,8 +67,7 @@ def menu():
 
     parser.add_argument('-lda',      default=0.001,    type=float,    help='Reversal gradient lambda')
     parser.add_argument('-lda_inc',  default=0.001,    type=float,    help='Reversal gradient lambda increment per epoch')
-    parser.add_argument('-page1',   default=-1,      type=int,   help='Nb pages to divide the source training set. -1 to load all')
-    parser.add_argument('-page2',   default=-1,      type=int,   help='Nb pages to divide the target training set. -1 to load all')
+    parser.add_argument('-page',   default=-1,      type=int,   help='Nb pages to divide the training set. -1 to load all')
     parser.add_argument('-super',  default=1,      dest='nb_super_epoch',      type=int,   help='nb_super_epoch')
     parser.add_argument('-th',         default=-1,     dest='threshold',           type=float, help='threshold. -1 to test from 0 to 1')
     parser.add_argument('-e',           default=200,    dest='epochs',            type=int,   help='nb_epoch')
@@ -192,9 +191,9 @@ if __name__ == "__main__":
     config = menu()
 
     source_data = load_data(config.path, config.db1, config.window, config.step,
-                                                        config.page1, config.test, config.truncate)
+                                                        config.page, config.test, config.truncate)
     target_data = load_data(config.path, config.db2, config.window, config.step,
-                                                        config.page2, config.test, config.truncate)
+                                                        config.page, config.test, config.truncate)
     datasets = {'source': source_data, 'target': target_data}
 
     print('SOURCE: {} \ttrain_generator:{}\tx_test:{}\ty_test:{}'.format(

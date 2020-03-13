@@ -16,7 +16,7 @@ import utilMetrics
 
 # ----------------------------------------------------------------------------
 def get_dann_weights_filename(folder, from_dataset, to_dataset, config):
-    return '{}{}/weights_dannCONV_model_from_{}_to_{}_w{}_s{}_l{}_f{}_k{}_drop{}_page1{}_page2{}_super{}_e{}_b{}_lda{}_lda_inc{}.npy'.format(
+    return '{}{}/weights_dannCONV_model_from_{}_to_{}_w{}_s{}_l{}_f{}_k{}_drop{}_page{}_super{}_e{}_b{}_lda{}_lda_inc{}.npy'.format(
                             folder,
                             ('/truncated' if config.truncate else ''),
                             from_dataset, to_dataset,
@@ -24,8 +24,8 @@ def get_dann_weights_filename(folder, from_dataset, to_dataset, config):
                             config.nb_layers,
                             config.nb_filters, config.k_size,
                             str(config.dropout),
-                            str(config.page1), str(config.page2),
-                            str(config.super), str(config.epochs), str(config.batch),
+                            str(config.page), str(config.nb_super_epoch),
+                            str(config.epochs), str(config.batch),
                             str(config.lda), str(config.lda_inc))
 
 # ----------------------------------------------------------------------------

@@ -14,8 +14,7 @@ drop=0.2			# 0
 super=1				#
 e=300					# 300
 b=12   				# 64 128 256
-page1=-1
-page2=-1
+page=-1			# -1
 lda=0.00001			# 0.01  0.001	0.0001	0.00001
 lda_inc=0.0001			#increment of lambda in each epoch
 #lr=0.5				# 0.5  1.0
@@ -27,11 +26,10 @@ python -u py_dasae.py -type ${type} \
 				-l ${layers} -f ${filters} -k ${kernel} -drop ${drop} \
 				-lda ${lda} \
                 -lda_inc ${lda_inc} \
-				-super ${super} -e ${e} -b ${b} \
-				-page1 ${page1} -page2 ${page2} \
+				-super ${super} -e ${e} -b ${b} -page ${page} \
 				-gpu ${gpu} \
 				${options} \
-				> out_${type}_${source}-${target}_w${window}_s${step}_l${layers}_f${filters}_k${kernel}_drop${drop}_lda${lda}_super${super}_e${e}_b${b}_page1${page1}_page2${page2}_${options}.txt
+				> out_${type}_${source}-${target}_w${window}_s${step}_l${layers}_f${filters}_k${kernel}_drop${drop}_lda${lda}_super${super}_e${e}_b${b}_page${page}_${options}.txt
 
 exit
 
@@ -51,11 +49,10 @@ for layers in 2 3 4 5 6; do   # 16 32 64 128 256 512
 								-l ${layers} -f ${filters} -k ${kernel} -drop ${drop} \
 								-lda ${lda} \
 				                -lda_inc ${lda_inc} \
-								-super ${super} -e ${e} -b ${b} \
-								-page1 ${page1} -page2 ${page2} \
+								-super ${super} -e ${e} -b ${b} -page ${page} \
 								-gpu ${gpu} \
 								${options} \
-								> out_${type}_${source}-${target}_w${window}_s${step}_l${layers}_f${filters}_k${kernel}_drop${drop}_lda${lda}_super${super}_e${e}_b${b}_page1${page1}_page2${page2}_${options}.txt
+								> out_${type}_${source}-${target}_w${window}_s${step}_l${layers}_f${filters}_k${kernel}_drop${drop}_lda${lda}_super${super}_e${e}_b${b}_page${page}_${options}.txt
 				done
 			done
 		done
