@@ -32,6 +32,9 @@ class DANNModel(object):
 
         self.dann_model, self.label_model, self.tsne_model = self.__build_dann_model()
 
+        self.weight_classifier_output = 0.5
+        self.weight_domain_output = 1.0
+
         self.__compile()
 
     # -------------------------------------------------------------------------
@@ -51,7 +54,8 @@ class DANNModel(object):
         #                                                                    'domain_output': 'binary_crossentropy'},  ###
         self.dann_model.compile(loss={'classifier_output': 'binary_crossentropy',
                                                                             'domain_output': 'binary_crossentropy'},
-                                                               loss_weights={'classifier_output': 0.5, 'domain_output': 1.0},
+                                                               loss_weights={'classifier_output': self.weight_classifier_output, 
+                                                                                    'domain_output': self.weight_domain_output},
                                                                optimizer=self.opt,
                                                                metrics={'classifier_output': 'mse',
                                                                                     'domain_output': 'accuracy'})
