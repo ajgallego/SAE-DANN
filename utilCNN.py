@@ -30,10 +30,10 @@ def get_cnn_weights_filename(folder, dataset_name, config):
 
 # -------------------------------------------------------------------------
 def get_cnn_logs_directory(folder, from_dataset, to_dataset, config):
-    weights_filename = get_cnn_weights_filename(folder, from_dataset, config)
-    return weights_filename
-                        .replace('/weights_cnn_model_', '/logs_cnn_model_from_')
-                        .replace('_w', '_to'+to_dataset+'_w')
+    filename = get_cnn_weights_filename(folder, from_dataset, config)
+    filename = filename.replace('/weights_cnn_model_', '/logs_cnn_model_from_')
+    filename = filename.replace('_w', '_to'+to_dataset+'_w')
+    return filename
 
     """return '{}{}/logs_cnn_model_from_{}_to_{}_w{}_s{}_l{}_f{}_k{}_drop{}_page{}_super{}_e{}_b{}.npy'.format(
                             folder,
