@@ -77,9 +77,9 @@ def menu():
     parser.add_argument('--truncate',   action='store_true', help='Truncate data')
     parser.add_argument('--test',   action='store_true', help='Only run test')
     parser.add_argument('--show',   action='store_true', help='Show the result')
+    parser.add_argument('--tboard',   action='store_true', help='Active tensorboard')
     parser.add_argument('--save',   action='store_true', help='Save binarized output images')
     parser.add_argument('-loadmodel', type=str,   help='Weights filename to load for test')
-    parser.add_argument('--tboard',   action='store_true', help='Active tensor board')
 
     parser.add_argument('-gpu',    default='0',    type=str,   help='GPU')
 
@@ -151,7 +151,10 @@ def train_and_evaluate(datasets, input_shape, config):
 
             if config.test == False:
                 utilCNN.train_cnn(dann.label_model,  datasets['source'], datasets['target'],
-                                                        weights_filename, utilConst.LOGS_CNN_FOLDERNAME, config)
+                                                        weights_filename, 
+                                                        utilConst.LOGS_CNN_FOLDERNAME, 
+                                                        utilConst.CSV_LOGS_CNN_FOLDERNAME, 
+                                                        config)
             else:
                 dann.label_model.load_weights(weights_filename)
     else:

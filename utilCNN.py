@@ -29,7 +29,7 @@ def get_cnn_weights_filename(folder, dataset_name, config):
 
 
 # -------------------------------------------------------------------------
-def get_cnn_logs_filename(folder, from_dataset, to_dataset, config):
+def get_cnn_logs_directory(folder, from_dataset, to_dataset, config):
     return '{}{}/logs_cnn_model_from_{}_to_{}_w{}_s{}_l{}_f{}_k{}_drop{}_page{}_e{}_b{}.npy'.format(
                             folder,
                             ('/truncated' if config.truncate else ''),
@@ -40,6 +40,10 @@ def get_cnn_logs_filename(folder, from_dataset, to_dataset, config):
                             '_drop'+str(config.dropout) if config.dropout > 0 else '',
                             str(config.page), str(config.epochs),
                             str(config.batch))
+
+def get_cnn_csv_logs_directory(folder, from_dataset, to_dataset, config):
+    weights_filename = get_cnn_logs_directory(folder, from_dataset, to_dataset, config)
+    return weights_filename.replace("/logs_cnn_model", "/csv_logs_cnn_model")
 
 
 # -------------------------------------------------------------------------
@@ -99,7 +103,11 @@ def train_cnn_batch(model, train_generator, batch_size):
 def __train_cnn_page(model, source_x_train, source_y_train, source_x_test, source_y_test,
                                                 target_x_train, target_y_train,
                                                 target_x_test, target_y_test,
-                                                nb_epochs, batch_size, weights_filename, tensorboard):
+                                                nb_epochs, batch_size, 
+                                                weights_filename, 
+                                                csv_logs_directory,
+                                                page,
+                                                with_tensorboard, tensorboard):
     best_label_f1 = -1
 
     def named_logs(source_f1_train, source_f1_test, target_f1_train, target_f1_test):
@@ -109,6 +117,12 @@ def __train_cnn_page(model, source_x_train, source_y_train, source_x_test, sourc
         result["target_f1_train"] = target_f1_train
         result["target_f1_test"] = target_f1_test
         return result
+
+    util.mkdirp(csv_logs_directory)
+    csv_logs_filename = csv_logs_directory + "/" + str(page) + "_logs.csv"
+    csv_logs_file = open(csv_logs_filename,'a+')
+    csv_logs_file.write("#Epoch\tSRC_TRAIN\tTRG_TRAIN\tSRC_TEST\tTRG_TEST\tTRG_MSE\tTRG_LOSS\tLBL_MSE\tLBL_LOSS\n")
+    csv_logs_file.close()
 
     for e in range(nb_epochs):
         src_generator = batch_generator(source_x_train, source_y_train, batch_size=batch_size)
@@ -139,11 +153,25 @@ def __train_cnn_page(model, source_x_train, source_y_train, source_x_test, sourc
         print("Epoch [{}/{}]: source label mse={:.4f}, f1={:.4f} | target label loss={:.4f}, mse={:.4f}, f1={:.4f} | {}".format(
                             e+1, nb_epochs, label_mse, source_f1_test, target_loss, target_mse, target_f1_test, saved))
 
-        tensorboard.on_epoch_end(e, named_logs(
+        if with_tensorboard:
+            tensorboard.on_epoch_end(e, named_logs(
                                 source_f1_train=source_f1_train,
                                 source_f1_test=source_f1_test,
                                 target_f1_train=target_f1_train,
                                 target_f1_test=target_f1_test))
+
+        csv_logs_file = open(csv_logs_filename,'a+')
+        csv_logs_file.write("%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n"%\
+                                (e,\
+                                source_f1_train,\
+                                target_f1_train,\
+                                source_f1_test,\
+                                target_f1_test,\
+                                target_mse,\
+                                target_loss,\
+                                label_mse
+                                ))
+        csv_logs_file.close()
 
         """
         sample_images(
@@ -163,16 +191,16 @@ def __train_cnn_page(model, source_x_train, source_y_train, source_x_test, sourc
 
 # ----------------------------------------------------------------------------
 def train_cnn(model, source, target,
-                    weights_filename, logs_directory, config):
+                    weights_filename, parent_logs_directory, parent_csv_logs_directory, config):
     print('Training CNN model...')
 
-    logs_filename = get_cnn_logs_filename( logs_directory,
-                                                                    source['name'],
-                                                                    target['name'], config)
+    csv_logs_directory = get_cnn_csv_logs_directory( parent_csv_logs_directory, source['name'], target['name'], config)
+    util.deleteFolder(csv_logs_directory)
 
-    util.deleteFolder(logs_filename)
+    logs_directory = get_cnn_logs_directory( parent_logs_directory, source['name'], target['name'], config)
+    util.deleteFolder(logs_directory)
     tensorboard = TensorBoard(
-                log_dir=logs_filename,
+                log_dir=logs_directory,
                 histogram_freq=0,
                 batch_size=config.batch,
                 write_graph=True,
@@ -199,10 +227,15 @@ def train_cnn(model, source, target,
                 target['generator'].shuffle()
                 target_x_train, target_y_train = next(target['generator'])
 
+            page = source['generator'].get_pos()
+
             __train_cnn_page(model, source_x_train, source_y_train, source['x_test'], source['y_test'],
                                                     target_x_train, target_y_train,
                                                     target['x_test'], target['y_test'],
-                                                    config.epochs, config.batch, weights_filename, tensorboard)
+                                                    config.epochs, config.batch, weights_filename,
+                                                    csv_logs_directory,
+                                                    page,
+                                                    config.tboard, tensorboard)
 
 """
 # ----------------------------------------------------------------------------

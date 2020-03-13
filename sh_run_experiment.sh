@@ -17,7 +17,7 @@ page=-1
 lda=0.00001			# 0.01  0.001	0.0001	0.00001
 lda_inc=0.0001			#increment of lambda in each epoch
 #lr=0.5				# 0.5  1.0
-options=	#"--test --save"			#--test  --truncate --save
+options=	#"--test --save"			#--test  --truncate --save --tboard
 
 python -u py_dasae.py -type ${type} \
 				-path datasets -db1 ${source} -db2 ${target} \
