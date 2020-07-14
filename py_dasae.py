@@ -150,9 +150,10 @@ def train_and_evaluate(datasets, input_shape, config):
                                                                                                                     datasets['source']['name'], config)
 
             if config.test == False:
-                utilCNN.train_cnn(dann.label_model,  datasets['source'],
-                                                        datasets['source']['x_test'], datasets['source']['y_test'],
+                utilCNN.train_cnn(dann.label_model,  datasets['source'], datasets['target'],
                                                         weights_filename,
+                                                        utilConst.LOGS_CNN_FOLDERNAME,
+                                                        utilConst.CSV_LOGS_CNN_FOLDERNAME,
                                                         config)
             else:
                 dann.label_model.load_weights(weights_filename)

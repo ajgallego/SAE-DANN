@@ -197,7 +197,7 @@ def __train_cnn_page(model, source_x_train, source_y_train, source_x_test, sourc
 
 
 # ----------------------------------------------------------------------------
-def train_cnn2(model, source, target,
+def train_cnn(model, source, target,
                     weights_filename, parent_logs_directory, parent_csv_logs_directory, config):
     print('Training CNN model...')
 
@@ -244,7 +244,7 @@ def train_cnn2(model, source, target,
                                                     page,
                                                     config.tboard, tensorboard)
 
-
+"""
 # ----------------------------------------------------------------------------
 def train_cnn(model,  train_data_generator, source_x_test, source_y_test,
                                 weights_filename, config):
@@ -276,3 +276,4 @@ def train_cnn(model,  train_data_generator, source_x_test, source_y_test,
     model.save_weights(weights_filename, overwrite=True)
 
     return model
+"""
