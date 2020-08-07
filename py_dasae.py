@@ -60,6 +60,8 @@ def menu():
     parser.add_argument('-w',          default=256,    dest='window',           type=int,   help='window size')
     parser.add_argument('-s',          default=-1,      dest='step',                type=int,   help='step size. -1 to use window size')
 
+    parser.add_argument('-gpos',          default=0,        dest='grl_position',     type=int,   help='Position of GRL')
+
     parser.add_argument('-l',          default=4,        dest='nb_layers',     type=int,   help='Number of layers')
     parser.add_argument('-f',          default=64,      dest='nb_filters',   type=int,   help='nb_filters')
     parser.add_argument('-k',          default=5,        dest='k_size',            type=int,   help='kernel size')
