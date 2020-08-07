@@ -19,7 +19,7 @@ def get_dann_weights_filename(folder, from_dataset, to_dataset, config):
     if config.grl_position == 0:
         grl_position_str = ""
     else:
-        grl_position_str = "gpos" + str(config.grl_position)
+        grl_position_str = "_gpos" + str(config.grl_position)
 
     return '{}{}/weights_dannCONV_model_from_{}_to_{}_w{}_s{}_l{}_f{}_k{}_drop{}_page{}_super{}_e{}_b{}_lda{}_lda_inc{}{}.npy'.format(
                             folder,
@@ -69,8 +69,11 @@ def train_dann_batch(dann_model, src_generator, target_genenerator, target_x_tra
     #### NEW MODEL ####
     #domain0 = np.zeros(target_x_train.shape[1:], dtype=int)
     #domain1 = np.ones(target_x_train.shape[1:], dtype=int)
-    batchYd = np.concatenate(( np.zeros((batch_size // 2,) + target_x_train.shape[1:], dtype=int),
-                                                              np.ones((batch_size // 2,) + target_x_train.shape[1:], dtype=int)) )
+
+    domain_output_shape = dann_model.output_shape[0]
+    #print(domain_output_shape)
+    batchYd = np.concatenate(( np.zeros((batch_size // 2,) + domain_output_shape[1:], dtype=int),
+                                                              np.ones((batch_size // 2,) + domain_output_shape[1:], dtype=int)) )
     #   np.tile(domain0, [batch_size // 2, 1, 1, 1]),
     #                                                       np.tile(domain1, [batch_size // 2, 1, 1, 1])))
     #print(batchYd)

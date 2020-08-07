@@ -97,7 +97,7 @@ class ModelSAE(AbstractModel):
 
         for i in xrange(self.config.nb_layers - min(self.grl_position_respect_global, self.config.nb_layers)):
             x = self.__create_layer_conv(x)
-            self.encoderLayers[i] = x
+            self.encoderLayers[min(self.grl_position_respect_global, self.config.nb_layers) + i] = x
 
         for i in xrange(self.config.nb_layers - abs(self.config.nb_layers - max(self.grl_position_respect_global, self.config.nb_layers))):
             x = self.__create_layer_conv(x, True)
