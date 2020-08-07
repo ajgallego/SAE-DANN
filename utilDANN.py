@@ -16,7 +16,12 @@ import utilMetrics
 
 # ----------------------------------------------------------------------------
 def get_dann_weights_filename(folder, from_dataset, to_dataset, config):
-    return '{}{}/weights_dannCONV_model_from_{}_to_{}_w{}_s{}_l{}_f{}_k{}_drop{}_page{}_super{}_e{}_b{}_lda{}_lda_inc{}.npy'.format(
+    if config.grl_position == 0:
+        grl_position_str = ""
+    else:
+        grl_position_str = "gpos" + str(config.grl_position)
+
+    return '{}{}/weights_dannCONV_model_from_{}_to_{}_w{}_s{}_l{}_f{}_k{}_drop{}_page{}_super{}_e{}_b{}_lda{}_lda_inc{}{}.npy'.format(
                             folder,
                             ('/truncated' if config.truncate else ''),
                             from_dataset, to_dataset,
@@ -26,7 +31,8 @@ def get_dann_weights_filename(folder, from_dataset, to_dataset, config):
                             str(config.dropout),
                             str(config.page), str(config.nb_super_epoch),
                             str(config.epochs), str(config.batch),
-                            str(config.lda), str(config.lda_inc))
+                            str(config.lda), str(config.lda_inc),
+                            grl_position_str)
 
 # ----------------------------------------------------------------------------
 def get_dann_logs_directory(folder, from_dataset, to_dataset, config):
