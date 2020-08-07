@@ -42,6 +42,10 @@ class ModelSAE(AbstractModel):
         self.bn_axis = self.__get_normalization_axis()
         self.encoderLayers = [None] * self.config.nb_layers
 
+        grl_position_respect_latent_code = self.config.grl_position
+        self.grl_position_respect_global = self.config.nb_layers + grl_position_respect_latent_code
+        assert(self.grl_position_respect_global >= 0 and self.grl_position_respect_global <= self.config.nb_layers*2)
+
     # -----------------------------------------
     def __get_normalization_axis(self):
         if K.image_data_format() == 'channels_last':
@@ -74,19 +78,33 @@ class ModelSAE(AbstractModel):
     # -----------------------------------------
     def get_model_features(self):
         x = self.input
-        for i in xrange(self.config.nb_layers):
+
+        for i in xrange(min(self.grl_position_respect_global, self.config.nb_layers)):
             x = self.__create_layer_conv(x)
             self.encoderLayers[i] = x
+
+        for i in xrange(abs(self.config.nb_layers - max(self.grl_position_respect_global, self.config.nb_layers))):
+            x = self.__create_layer_conv(x, True)
+            ind = self.config.nb_layers - i - 2
+            if ind >= 0:
+                x = layers.add([x, self.encoderLayers[ind]])
+
         return x
 
     # -----------------------------------------
     def get_model_labels(self, input):
         x = input
-        for i in xrange(self.config.nb_layers):
+
+        for i in xrange(self.config.nb_layers - min(self.grl_position_respect_global, self.config.nb_layers)):
+            x = self.__create_layer_conv(x)
+            self.encoderLayers[i] = x
+
+        for i in xrange(self.config.nb_layers - abs(self.config.nb_layers - max(self.grl_position_respect_global, self.config.nb_layers))):
             x = self.__create_layer_conv(x, True)
             ind = self.config.nb_layers - i - 2
             if ind >= 0:
                 x = layers.add([x, self.encoderLayers[ind]])
+
         x = Conv2D(1, kernel_size=self.config.k_size, strides=1,
                                     kernel_initializer = initializers.glorot_uniform(seed=42),   # 'glorot_uniform', # zeros
                                     kernel_regularizer = None,
