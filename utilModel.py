@@ -16,8 +16,9 @@ import keras.backend as K
 class AbstractModel(object):
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, input_shape):
+    def __init__(self, input_shape, domain_model_version):
         self.input = Input(shape=input_shape, name="main_input")
+        self.domain_model_version = domain_model_version
 
     @abc.abstractmethod
     def get_model_features(self):
@@ -36,7 +37,7 @@ class AbstractModel(object):
 class ModelSAE(AbstractModel):
     # -----------------------------------------
     def __init__(self, input_shape, config):
-        AbstractModel.__init__(self, input_shape)
+        AbstractModel.__init__(self, input_shape, config.domain_model_version)
         self.config = config
         self.config.strides = 2
         self.bn_axis = self.__get_normalization_axis()
@@ -133,15 +134,16 @@ class ModelSAE(AbstractModel):
                         'classifier_output',
                         True)
 
-    # -----------------------------------------
-    def get_model_domains(self, input):
-        """
+    def model_domain_v1(self, input):
         #x = Flatten()(input)
         x = GlobalAveragePooling2D()(input)
         x = Dense(128, activation='relu')(x)
         x = Dropout(0.1)(x)
         x = Dense(2, activation='softmax', name='domain_output')(x)
-        """
+
+        return x
+
+    def model_domain_v2(self, input):
         #### NEW MODEL ####
         back = self.config.nb_filters
         self.config.nb_filters = int(back / 4)
@@ -158,3 +160,13 @@ class ModelSAE(AbstractModel):
 
         return x
 
+    # -----------------------------------------
+    def get_model_domains(self, input):
+
+        if self.domain_model_version == 1:
+            return self.model_domain_v1(input)
+        elif self.domain_model_version == 2:
+            return self.model_domain_v2(input)
+        else:
+            assert(False)
+        

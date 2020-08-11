@@ -83,6 +83,8 @@ def menu():
     parser.add_argument('--save',   action='store_true', help='Save binarized output images')
     parser.add_argument('-loadmodel', type=str,   help='Weights filename to load for test')
 
+    parser.add_argument('-d_model',    default=0,    dest='domain_model_version', type=int,   help='Domain model version')
+
     parser.add_argument('-gpu',    default='0',    type=str,   help='GPU')
 
     args = parser.parse_args()

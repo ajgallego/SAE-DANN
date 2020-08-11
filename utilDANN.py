@@ -21,7 +21,7 @@ def get_dann_weights_filename(folder, from_dataset, to_dataset, config):
     else:
         grl_position_str = "_gpos" + str(config.grl_position)
 
-    return '{}{}/weights_dannCONV_model_from_{}_to_{}_w{}_s{}_l{}_f{}_k{}_drop{}_page{}_super{}_e{}_b{}_lda{}_lda_inc{}{}.npy'.format(
+    return '{}{}/weights_dannCONV_model_from_{}_to_{}_w{}_s{}_l{}_f{}_k{}_drop{}_page{}_super{}_e{}_b{}_lda{}_lda_inc{}_dmodel{}{}.npy'.format(
                             folder,
                             ('/truncated' if config.truncate else ''),
                             from_dataset, to_dataset,
@@ -32,6 +32,7 @@ def get_dann_weights_filename(folder, from_dataset, to_dataset, config):
                             str(config.page), str(config.nb_super_epoch),
                             str(config.epochs), str(config.batch),
                             str(config.lda), str(config.lda_inc),
+                            str(config.domain_model_version),
                             grl_position_str)
 
 # ----------------------------------------------------------------------------
