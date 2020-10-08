@@ -6,6 +6,7 @@ import numpy as np
 import util
 import utilConst
 import utilDataGenerator
+from collections import Counter
 
 
 # -----------------------------------------------------------------------------
@@ -218,6 +219,126 @@ def __calculate_img_diff(img_pr, img_y):
 
     return img_diff
 
+
+# ----------------------------------------------------------------------------
+def getHistograms(model, array_files_to_save, config, num_decimal=None):
+
+    print('Calculating histogram...')
+
+    array_files = load_array_of_files(config.path, array_files_to_save)
+
+    for fname in array_files:
+        print('Processing image', fname)
+
+        fname_gt = fname.replace(utilConst.X_SUFIX, utilConst.Y_SUFIX)
+        img = cv2.imread(fname, cv2.IMREAD_GRAYSCALE)
+        gt = cv2.imread(fname_gt, cv2.IMREAD_GRAYSCALE)
+
+        rows = img.shape[0]
+        cols = img.shape[1]
+        if img.shape[0] < config.window or img.shape[1] < config.window:
+            new_rows = config.window if img.shape[0] < config.window else img.shape[0]
+            new_cols = config.window if img.shape[1] < config.window else img.shape[1]
+            img = cv2.resize(img, (new_cols, new_rows), interpolation = cv2.INTER_CUBIC)
+
+        #cv2.imshow("img", img)
+        #cv2.waitKey(0)
+
+        finalImg = np.zeros(img.shape, dtype=float)
+        
+        for (x, y, window) in utilDataGenerator.sliding_window(img, stepSize=config.step, windowSize=(config.window, config.window)):
+            if window.shape[0] != config.window or window.shape[1] != config.window:
+                continue
+
+            roi = img[y:(y + config.window), x:(x + config.window)].copy()
+
+            #cv2.imshow("roi", roi)
+            #cv2.waitKey(0)
+
+            roi = roi.reshape(1, config.window, config.window, 1)
+            roi = roi.astype('float32')
+            norm_type = '255'
+            roi = utilDataGenerator.normalize_data( roi, norm_type )
+
+            prediction = model.predict(roi)
+
+            finalImg[y:(y + config.window), x:(x + config.window)] = prediction[0].reshape(config.window, config.window)
+           
+            #cv2.imshow("finalImg", (1 - finalImg.astype('uint8')) * 255 )
+            #cv2.waitKey(0)
+        
+        tuple_prediction = tuple(finalImg.reshape(1,-1)[0])
+
+        if num_decimal is not None:
+            tuple_prediction_round = []
+            for num in tuple_prediction:
+                if num > 0.01:
+                    tuple_prediction_round.append(round(num, num_decimal))
+                
+            #tuple_prediction_round = [round(num, num_decimal) for num in tuple_prediction]
+            tuple_prediction = tuple_prediction_round
+
+            precision = 1.
+            for i in range(num_decimal):
+                precision /= 10.
+
+            value = 0.
+            value = round(value, num_decimal)
+            while value <= 1:
+                tuple_prediction.append(value)
+                value += precision
+                value = round(value, num_decimal)
+        
+        histogram_prediction = Counter(tuple_prediction)
+
+        out_histogram_filename = fname.replace(config.path, 'OUTPUT/histogram')
+
+        out_histogram_filename = out_histogram_filename.replace(utilConst.X_SUFIX+'/', '/'+config.modelpath + '/')
+        out_histogram_filename = out_histogram_filename.replace(utilConst.WEIGHTS_DANN_FOLDERNAME+'/', '')
+        out_histogram_filename = out_histogram_filename.replace(utilConst.WEIGHTS_CNN_FOLDERNAME+'/', '')
+        out_histogram_filename = out_histogram_filename.replace(utilConst.LOGS_DANN_FOLDERNAME+'/', '')
+        out_histogram_filename = out_histogram_filename.replace(utilConst.LOGS_CNN_FOLDERNAME+'/', '')
+
+        out_histogram_filename = out_histogram_filename.replace('.h5', '/OUT_PR').replace('.npy', '/OUT_PR')
+
+        out_histogram_filename = out_histogram_filename.replace(".png", ".txt")
+        print(' - Saving predicted image to:', out_histogram_filename)
+        util.mkdirp( os.path.dirname(out_histogram_filename) )
+
+        items_histogram = sorted(histogram_prediction.items())
+        str_prob = ""
+        str_value = ""
+
+        for prob, value in items_histogram:
+            str_prob += str(prob) + "\t"
+            str_value += str(value-1) + "\t"
+
+        str_histogram = str_prob + "\n" + str_value
+
+        tuple_prediction_round = [str_prob for prob, value in items_histogram]
+
+        saveString(str_histogram, out_histogram_filename, True)
+        
+
+
+
+def saveString(content_string, path_file, close_file):
+    assert type(content_string) == str
+    assert type(path_file) == str
+    assert type(close_file) == bool
+    
+    path_dir = os.path.dirname(path_file)
+
+    if (path_dir != ""):
+        if not os.path.exists(path_dir):
+            os.makedirs(path_dir, 493)
+            
+    f = open(path_file,"w+")
+    f.write(content_string)
+    
+    if (close_file == True):
+        f.close()
+        
 
 # ----------------------------------------------------------------------------
 def save_images(model, array_files_to_save, config):

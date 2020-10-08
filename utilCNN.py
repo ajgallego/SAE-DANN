@@ -143,11 +143,11 @@ def __train_cnn_page(model, source_x_train, source_y_train, source_x_test, sourc
         source_prediction_test = model.predict(source_x_test, batch_size=32, verbose=0)
         source_f1_test, source_th_test = utilMetrics.calculate_best_fm(source_prediction_test, source_y_test)
 
-        target_prediction_train = model.predict(target_x_train, batch_size=32, verbose=0)
-        target_f1_train, target_th_train = utilMetrics.calculate_best_fm(target_prediction_train, target_y_train)
+        #target_prediction_train = model.predict(target_x_train, batch_size=32, verbose=0)
+        #target_f1_train, target_th_train = utilMetrics.calculate_best_fm(target_prediction_train, target_y_train)
 
         target_prediction_test = model.predict(target_x_test, batch_size=32, verbose=0)
-        target_f1_test, target_th_test = utilMetrics.calculate_best_fm(target_prediction_test, target_y_test)
+        target_f1_test, target_th_test = utilMetrics.calculate_best_fm(target_prediction_test, target_y_test, source_th_test)
 
         saved = ""
         if source_f1_test >= best_label_f1:
@@ -164,14 +164,15 @@ def __train_cnn_page(model, source_x_train, source_y_train, source_x_test, sourc
             tensorboard.on_epoch_end(e, named_logs(
                                 source_f1_train=source_f1_train,
                                 source_f1_test=source_f1_test,
-                                target_f1_train=target_f1_train,
+                                target_f1_train=0,#target_f1_train,
                                 target_f1_test=target_f1_test))
 
         csv_logs_file = open(csv_logs_filename,'a+')
         csv_logs_file.write("%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n"%\
                                 (e,\
                                 source_f1_train,\
-                                target_f1_train,\
+                                0,\
+                                #target_f1_train,\
                                 source_f1_test,\
                                 target_f1_test,\
                                 target_mse,\
