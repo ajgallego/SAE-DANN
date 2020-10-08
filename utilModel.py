@@ -109,9 +109,10 @@ class ModelSAE(AbstractModel):
             x = self.__create_layer_conv(x)
             self.encoderLayers[min(grl_position_respect_global, nb_layers) + i] = x
 
+        previous_dec_layers = abs(self.config.nb_layers - max(self.grl_position_respect_global, self.config.nb_layers))
         for i in xrange(nb_layers - abs(nb_layers - max(grl_position_respect_global, nb_layers))):
             x = self.__create_layer_conv(x, True)
-            ind = nb_layers - i - 2
+            ind = nb_layers - previous_dec_layers - i - 2
             if with_residual_connections and ind >= 0:
                 x = layers.add([x, self.encoderLayers[ind]])
 
