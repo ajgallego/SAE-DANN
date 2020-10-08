@@ -100,6 +100,8 @@ def calculate_best_fm(y_pred, y_test, args_th=-1):
         results = run_test(y_pred, y_test, threshold=args_th)
         best_fm = results['fm']
         best_th = args_th
+        print('Threshold:', best_th)
+        print('Fm: {:0.4f}'.format(best_fm))
 
     return best_fm, best_th
 
