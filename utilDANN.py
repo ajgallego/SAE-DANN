@@ -150,17 +150,21 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
 
         loss, domain_loss, label_loss, domain_acc, label_mse = logs
 
-        source_prediction_train = dann_builder.label_model.predict(source_x_train, batch_size=32, verbose=0)
-        source_f1_train, source_th_train = utilMetrics.calculate_best_fm(source_prediction_train, source_y_train)
+        #print("Source train")
+        #source_prediction_train = dann_builder.label_model.predict(source_x_train, batch_size=32, verbose=0)
+        #source_f1_train, source_th_train = utilMetrics.calculate_best_fm(source_prediction_train, source_y_train)
 
+        print("Source test")
         source_prediction_test = dann_builder.label_model.predict(source_x_test, batch_size=32, verbose=0)
         source_f1_test, source_th_test = utilMetrics.calculate_best_fm(source_prediction_test, source_y_test)
 
-        target_prediction_train = dann_builder.label_model.predict(target_x_train, batch_size=32, verbose=0)
-        target_f1_train, target_th_train = utilMetrics.calculate_best_fm(target_prediction_train, target_y_train)
+        #print("Target train")
+        #target_prediction_train = dann_builder.label_model.predict(target_x_train, batch_size=32, verbose=0)
+        #target_f1_train, target_th_train = utilMetrics.calculate_best_fm(target_prediction_train, target_y_train)
 
+        print("Target test")
         target_prediction_test = dann_builder.label_model.predict(target_x_test, batch_size=32, verbose=0)
-        target_f1_test, target_th_test = utilMetrics.calculate_best_fm(target_prediction_test, target_y_test)
+        target_f1_test, target_th_test = utilMetrics.calculate_best_fm(target_prediction_test, target_y_test, source_th_test)
 
         saved = ""
         if source_f1_test >= best_label_f1:
@@ -174,21 +178,23 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
         #print("Epoch [{}/{}]: source label loss={:.4f}, mse={:.4f} | domain loss={:.4f}, acc={:.4f} | target label loss={:.4f}, mse={:.4f} | {}".format(
         #                    e+1, nb_epochs, label_loss, label_mse, domain_loss, domain_acc, target_loss, target_mse, saved))
         print("Epoch [{}/{}]: source label loss={:.4f}, mse={:.4f}, f1={:.4f} | domain loss={:.4f}, acc={:.4f} | target label loss={:.4f}, mse={:.4f}, f1={:.4f} | {}".format(
-                            e+1, nb_epochs, label_loss, label_mse, source_f1_train, domain_loss, domain_acc, target_loss, target_mse, target_f1_test, saved))
+                            e+1, nb_epochs, label_loss, label_mse, source_f1_test, domain_loss, domain_acc, target_loss, target_mse, target_f1_test, saved))
 
         if with_tensorboard:
             tensorboard.on_epoch_end(e, named_logs(
-                                source_f1_train=source_f1_train,
+                                source_f1_train=0, #source_f1_train,
                                 source_f1_test=source_f1_test,
-                                target_f1_train=target_f1_train,
+                                target_f1_train=0, #target_f1_train,
                                 target_f1_test=target_f1_test,
                                 hp_lambda=dann_builder.grl_layer.get_hp_lambda()))
 
         csv_logs_file = open(csv_logs_filename,'a+')
         csv_logs_file.write("%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n"%\
                                 (e,\
-                                source_f1_train,\
-                                target_f1_train,\
+                                0,\
+                                #source_f1_train,\
+                                0,\
+                                #target_f1_train,\
                                 source_f1_test,\
                                 target_f1_test,\
                                 target_mse,\

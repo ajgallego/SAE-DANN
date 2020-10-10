@@ -145,6 +145,7 @@ def train_and_evaluate(datasets, input_shape, config):
                                                         utilConst.CSV_LOGS_DANN_FOLDERNAME,
                                                         config)
         else:
+            print(weights_filename)
             dann.load( weights_filename )  # Load the last save weights...
 
     elif config.type == 'cnn':
@@ -164,19 +165,22 @@ def train_and_evaluate(datasets, input_shape, config):
     else:
         raise Exception('Unknown type')
 
-
+    batch=1
     print('# Evaluate...')
-    source_loss, source_mse = dann.label_model.evaluate(datasets['source']['x_test'], datasets['source']['y_test'], batch_size=32, verbose=0)
-    target_loss, target_mse = dann.label_model.evaluate(datasets['target']['x_test'], datasets['target']['y_test'], batch_size=32, verbose=0)
+    source_loss, source_mse = dann.label_model.evaluate(datasets['source']['x_test'], datasets['source']['y_test'], batch_size=batch, verbose=0)
+    target_loss, target_mse = dann.label_model.evaluate(datasets['target']['x_test'], datasets['target']['y_test'], batch_size=batch, verbose=0)
     print('Result: {}\t{}\t{:.4f}\t{:.4f}'.format(datasets['source']['name'], datasets['target']['name'], source_mse, target_mse))
 
-    pred_source = dann.label_model.predict(datasets['source']['x_test'], batch_size=32, verbose=0)
-    pred_target = dann.label_model.predict(datasets['target']['x_test'], batch_size=32, verbose=0)
+    pred_source = dann.label_model.predict(datasets['source']['x_test'], batch_size=batch, verbose=0)
+    pred_target = dann.label_model.predict(datasets['target']['x_test'], batch_size=batch, verbose=0)
     print('SOURCE:')
     source_best_fm, source_best_th = utilMetrics.calculate_best_fm(pred_source, datasets['source']['y_test'])
     print('TARGET:')
-    target_best_fm, target_best_th = utilMetrics.calculate_best_fm(pred_target, datasets['target']['y_test'])
+    target_best_fm, target_best_th = utilMetrics.calculate_best_fm(pred_target, datasets['target']['y_test'], source_best_th)
 
+    config.modelpath = weights_filename
+    _, target_test_folds = utilIO.load_folds_names(config.db2)
+    #utilIO.getHistograms(dann.label_model, target_test_folds, config, None)
 
     # Save output images
     if config.save:
