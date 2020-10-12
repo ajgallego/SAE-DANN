@@ -1,0 +1,152 @@
+reset
+set encoding utf8 # mandatory
+
+
+
+LCases="abcdefghijklmnopqrstuvwxyz"
+SCases="ᴀʙᴄᴅᴇғɢʜɪᴊᴋʟᴍɴᴏᴘǫʀsᴛᴜᴠᴡxʏᴢ"
+
+toscchr(c)= c eq ""  ?  ""  :  substr( SCases.c, strstrt(LCases.c, c), strstrt(LCases.c, c) )
+
+texsc(s) = strlen(s) <= 1 ? toscchr(s) : texsc(s[1:strlen(s)/2]).texsc(s[(strlen(s)/2)+1:strlen(s)])
+
+sal_sal_label="Salzinnes"
+sal_dib_label="Dibco"
+sal_phi_label="PHI"
+dib_sal_label="Sal"
+dib_dib_label="Dibco"
+dib_phi_label="PHI"
+phi_sal_label="Salzinnes"
+phi_dib_label="Dibco"
+phi_phi_label="PHI"
+
+
+sal_sal_label=texsc(sal_sal_label)
+sal_dib_label=texsc(sal_dib_label)
+sal_phi_label=texsc(sal_phi_label)
+dib_sal_label=texsc(dib_sal_label)
+dib_dib_label=texsc(dib_dib_label)
+source_sal_text = "Salzinnes-"
+source_dib_text = "Dibco-"
+source_phi_text = "Phi-"
+
+source_sal_text=texsc(source_sal_text)
+source_dib_text=texsc(source_dib_text)
+source_phi_text=texsc(source_phi_text)
+
+set terminal pdf
+set output "plot_f1_corr.pdf"
+
+set multiplot
+
+
+
+set size 1, 1
+set yrange [0.0:100.0]
+set xrange [0.0:1.0]
+set xlabel "Correlation coefficient"
+set grid
+
+set key box center top
+
+#
+# define line styles using explicit rgbcolor names
+#
+
+set style func linespoints
+
+set style line 1 lt 5 lc rgb "red" lw 2 dt 4 pt 5
+set style line 2 lt 5 lc rgb "red" lw 2 dt 4 pt 2
+set style line 3 lt 5 lc rgb "red" lw 2 dt 4 pt 9
+
+set style line 4 lt 5 lc rgb "blue" lw 2 dt 4 pt 5
+set style line 5 lt 5 lc rgb "blue" lw 2 dt 4 pt 2
+set style line 6 lt 5 lc rgb "blue" lw 2 dt 4 pt 9
+
+set style line 7 lt 5 lc rgb "orange" lw 2 dt 4 pt 5
+set style line 8 lt 5 lc rgb "orange" lw 2 dt 4 pt 2
+set style line 9 lt 5 lc rgb "orange" lw 2 dt 4 pt 9
+
+
+
+set rmargin 5
+set ylabel '{/Helvetica F@_{{/*0.05 &{c}}1}^{/Helvetica-Italic {/*0.1 &{c}}M}} (%)'
+set title ""
+
+
+set origin 0,0
+set size 1,1
+
+#set object 1 rect from 16,88.2 to 22,85.5 back dt "."
+#set object 1 rect fc rgb "cyan" fillstyle empty
+
+#set arrow 1 from 22,85.5 to 58,85.1 nohead dt "." 
+#set arrow 2 from 22,88.2 to 58,88.8 nohead dt "." 
+
+
+
+
+
+# Implements a 'textsc' function like in (La)TeX.
+# Based on original answer at https://stackoverflow.com/a/54174759/11369382
+
+
+
+
+set arrow 1 from 0.365,76.0 to 0.64,76 nohead dt "-" lc rgb "purple" lt 1
+set arrow 2 from 0.365,55.7 to 0.64,55.7 nohead dt "-" lc rgb "purple" lw 1
+
+
+set label 11 source_sal_text at 0.365, 95. left nopoint tc rgb "red"
+set label 12 source_dib_text at 0.365, 73. left nopoint tc rgb "blue"
+set label 13 source_phi_text at 0.365, 53.35 left nopoint tc rgb "orange"
+
+#set arrow 6 from 2.5,90.54 to 32.5, 90.54 nohead dt "." 
+
+
+plot \
+        "+" u 1:(NaN) title " " w dots linecolor rgb "white",\
+        'data-f1-corr.txt' using 2:1 with point ls 1 ps .75 title sal_sal_label,\
+        'data-f1-corr.txt' using 4:3 with point ls 2 ps .85  title sal_dib_label,\
+        'data-f1-corr.txt' using 6:5 with point ls 3 ps .85  title sal_phi_label,\
+        "+" u 1:(NaN) title " " w dots linecolor rgb "white",\
+        'data-f1-corr.txt' using 8:7 with point ls 4 ps .85   title dib_sal_label,\
+        'data-f1-corr.txt' using 10:9 with point ls 5 ps .85 title dib_dib_label,\
+        'data-f1-corr.txt' using 12:11 with point ls 6 ps .85 title dib_phi_label,\
+        "+" u 1:(NaN) title " " w dots linecolor rgb "white",\
+        'data-f1-corr.txt' using 14:13 with point ls 7 ps .85   title phi_sal_label,\
+        'data-f1-corr.txt' using 16:15 with point ls 8 ps .85 title phi_dib_label,\
+        'data-f1-corr.txt' using 18:17 with point ls 9 ps .85 title phi_phi_label,\
+        'nd-points' using 2:1 pt 6 ps 1.25 lc rgb "blue" title ''
+
+
+
+#set origin 0.5,0.17
+#set size 0.45,0.5
+#set yrange [85.5:88.5]
+#set xrange [18.0:20.0]
+#set object 1 rectangle from graph 0,0 to graph 1,1 behind fillcolor rgb 'white' fillstyle solid noborder
+
+
+#unset key 
+#unset ylabel
+#unset xlabel
+#unset arrow
+#unset label
+#set arrow 3 from 19.4,88.0 to 20,88.055 nohead dt "-" lc rgb "blue" lw 1
+#set arrow 4 from 19.2,87.9 to 18.6,86.55 nohead dt "-" lc rgb "blue" lw 1
+#set arrow 5 from 18.6,86.1 to 18.6,86.2 nohead dt "-" lc rgb "blue" lw 1
+
+
+#plot 	'data-f1-corr.txt' using 2:1 with point ls 1 pt 5 ps 1.35 title sal_sal_label,\
+#        'data-f1-corr.txt' using 4:3 with point ls 2 pt 3 ps 1.45  title sal_dib_label,\
+#        'data-f1-corr.txt' using 8:7 with point ls 4 pt 9 ps 1.45  title sal_phi_label,\
+#        'data-f1-corr.txt' using 10:9 with point ls 5 pt 11 ps 1.45   title dib_sal_label,\
+#        'data-f1-corr.txt' using 6:5 with point ls 3 pt 13  ps 1.45 title dib_dib_label,\
+#        'nd-points' using 2:1 pt 6 ps 1.75 lc rgb "blue" title ''
+
+
+#unset multiplot
+
+
+

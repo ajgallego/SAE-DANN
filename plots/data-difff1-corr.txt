@@ -1,0 +1,2 @@
+#F1-Sal-Dib  Corr-Sal-Dib    F1-Sal-PHI   Corr-Sal-PHI F1-Dib-Sal   Corr-Dib-Sal F1-Dib-Dib   Corr-Dib-Dib F1-Dib-PHI   Corr-Dib-PHI   F1-PHI-Sal   Corr-PHI-Sal   F1-PHI-Dib   Corr-PHI-Dib   F1-PHI-PHI   Corr-PHI-PHI 
+23.9    0.016616    50.2    0.0065    -6.9    0.960745  14.7    0.09151 -6.4    0.99754 1.3    0.998495
