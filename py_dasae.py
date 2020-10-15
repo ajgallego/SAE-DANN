@@ -145,6 +145,7 @@ def train_and_evaluate(datasets, input_shape, config):
                                                         utilConst.CSV_LOGS_DANN_FOLDERNAME,
                                                         config)
         else:
+            #weights_filename = weights_filename.replace("_dmodel2", "")
             print(weights_filename)
             dann.load( weights_filename )  # Load the last save weights...
 
@@ -161,6 +162,7 @@ def train_and_evaluate(datasets, input_shape, config):
                                                         utilConst.CSV_LOGS_CNN_FOLDERNAME,
                                                         config)
             else:
+                
                 dann.label_model.load_weights(weights_filename)
     else:
         raise Exception('Unknown type')

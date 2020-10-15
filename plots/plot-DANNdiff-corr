@@ -34,7 +34,7 @@ set multiplot
 
 
 set size 1, 1
-set yrange [-20:60.0]
+set yrange [0:4.0]
 set xrange [-0.1:1.1]
 set xlabel "Correlation coefficient"
 set grid
@@ -59,7 +59,9 @@ set style line 6 lt 5 lc rgb "orange" lw 2 dt 4 pt 5 ps .75
 
 
 set rmargin 5
-set ylabel '{/Helvetica DANN-SAE F@_{{/*0.05 &{c}}1}} (%)'
+#set ylabel '{/Helvetica DANN-SAE F@_{{/*0.05 &{c}}1}} (%)'
+#set ylabel '{/Helvetica DANN/SAE}'
+set ylabel '{/Helvetica F@_{{/*0.05 &{c}}1}^{/Helvetica-Italic {/*0.1 &{c}}DANN}} / {/Helvetica F@_{{/*0.05 &{c}}1}^{/Helvetica-Italic {/*0.1 &{c}}SAE}} '
 set title ""
 
 
@@ -82,14 +84,14 @@ set size 1,1
 
 
 
-set arrow 1 from 0.755,45.5 to 1.08,45.5 nohead lc rgb "purple" lt 1
-set arrow 2 from 0.755,32.5 to 1.08,32.5 nohead lc rgb "purple" lw 1
+set arrow 1 from 0.755,3.275 to 1.08,3.275 nohead lc rgb "purple" lt 1
+set arrow 2 from 0.755,2.65 to 1.08,2.65 nohead lc rgb "purple" lw 1
 
-set label 11 source_sal_text at 0.77, 56. left nopoint tc rgb "red"
-set label 12 source_dib_text at 0.77, 43.5 left nopoint tc rgb "blue"
-set label 13 source_phi_text at 0.77, 30.5 left nopoint tc rgb "orange"
+set label 11 source_sal_text at 0.77, 3.8 left nopoint tc rgb "red"
+set label 12 source_dib_text at 0.77, 3.2 left nopoint tc rgb "blue"
+set label 13 source_phi_text at 0.77, 2.55 left nopoint tc rgb "orange"
 
-#set arrow 6 from 2.5,90.54 to 32.5, 90.54 nohead dt "." 
+set arrow 6 from -0.1,1 to 1.1,1 nohead dt "." lw 2
 
 
 plot \
