@@ -212,14 +212,18 @@ def train_cnn(model, source, target,
 
     logs_directory = get_cnn_logs_directory( parent_logs_directory, source['name'], target['name'], config)
     util.deleteFolder(logs_directory)
-    tensorboard = TensorBoard(
+    
+    if config.tboard:
+        tensorboard = TensorBoard(
                 log_dir=logs_directory,
                 histogram_freq=0,
                 batch_size=config.batch,
                 write_graph=True,
                 write_grads=True
                 )
-    tensorboard.set_model(model)
+        tensorboard.set_model(model)
+    else:
+        tensorboard = None
 
     for se in range(config.nb_super_epoch):
         print(80 * "-")
