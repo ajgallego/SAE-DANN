@@ -2,6 +2,8 @@ reset
 set encoding utf8 # mandatory
 
 
+set tics font "Helvetica,16"
+set font "Helvetica,26"
 
 LCases="abcdefghijklmnopqrstuvwxyz"
 SCases="ᴀʙᴄᴅᴇғɢʜɪᴊᴋʟᴍɴᴏᴘǫʀsᴛᴜᴠᴡxʏᴢ"
@@ -36,7 +38,7 @@ set multiplot
 set size 1, 1
 set yrange [0:4.0]
 set xrange [-0.1:1.1]
-set xlabel "Correlation coefficient"
+set xlabel "Correlation coefficient" font "Helvetica,17"
 set grid
 
 set key box right top
@@ -61,7 +63,7 @@ set style line 6 lt 5 lc rgb "orange" lw 2 dt 4 pt 5 ps .75
 set rmargin 5
 #set ylabel '{/Helvetica DANN-SAE F@_{{/*0.05 &{c}}1}} (%)'
 #set ylabel '{/Helvetica DANN/SAE}'
-set ylabel '{/Helvetica F@_{{/*0.05 &{c}}1}^{/Helvetica-Italic {/*0.1 &{c}}DANN}} / {/Helvetica F@_{{/*0.05 &{c}}1}^{/Helvetica-Italic {/*0.1 &{c}}SAE}} '
+set ylabel '{/Helvetica F@_{{/*0.05 &{c}}1}^{/Helvetica-Italic {/*0.1 &{c}}DANN}} / {/Helvetica F@_{{/*0.05 &{c}}1}^{/Helvetica-Italic {/*0.1 &{c}}SAE}} ' font "Helvetica,17"
 set title ""
 
 
