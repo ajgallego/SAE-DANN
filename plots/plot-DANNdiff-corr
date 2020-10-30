@@ -34,10 +34,10 @@ set output "plot_diffF1corr.pdf"
 set multiplot
 
 
-
+#set logscale y
 set size 1, 1
 set yrange [0:4.0]
-set xrange [-0.1:1.1]
+set xrange [-0.2:1.1]
 set xlabel "Correlation coefficient" font "Helvetica,17"
 set grid
 
@@ -93,7 +93,7 @@ set label 11 source_sal_text at 0.77, 3.8 left nopoint tc rgb "red"
 set label 12 source_dib_text at 0.77, 3.2 left nopoint tc rgb "blue"
 set label 13 source_phi_text at 0.77, 2.55 left nopoint tc rgb "orange"
 
-set arrow 6 from -0.1,1 to 1.1,1 nohead dt "." lw 2
+set arrow 6 from -0.2,1 to 1.1,1 nohead dt "." lw 2
 
 
 plot \

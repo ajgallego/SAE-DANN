@@ -91,6 +91,9 @@ def load_folds_names(dbname):
     BDI_train_synthetic_inv_col = ['synthetic/inv_col/BDI/train/bdi11_GR']
     BDI_test_synthetic_inv_col = ['synthetic/inv_col/BDI/test/bdi11_GR']
 
+    LRDE_DBD_train = ['LRDE_DBD/train/GR']
+    LRDE_DBD_test  = ['LRDE_DBD/test/GR']
+
 
     if dbname == 'dibco2016':
         test_folds = DIBCO[6]
@@ -147,6 +150,9 @@ def load_folds_names(dbname):
     elif dbname == 'sal-blur30x30':
         train_folds = SALZINNES_train_synthetic_blur30x30
         test_folds = SALZINNES_test_synthetic_blur30x30
+    elif dbname == 'lrde':
+        train_folds = LRDE_DBD_train
+        test_folds  = LRDE_DBD_test
     elif dbname == 'voy':
         train_folds = [val for sublist in DIBCO for val in sublist]
         test_folds = VOYNICH_test
@@ -166,6 +172,7 @@ def load_folds_names(dbname):
         test_folds.append(PHI_test)
         test_folds.append(EINSIELDELN_test)
         test_folds.append(SALZINNES_test)
+        test_folds.append(LRDE_DBD_test)
 
         DIBCO.pop(6)
         DIBCO.pop(5)
@@ -175,6 +182,7 @@ def load_folds_names(dbname):
         train_folds.append(PHI_train)
         train_folds.append(EINSIELDELN_train)
         train_folds.append(SALZINNES_train)
+        train_folds.append(LRDE_DBD_train)
 
         test_folds = [val for sublist in test_folds for val in sublist]  # transform to flat lists
         train_folds = [val for sublist in train_folds for val in sublist]
@@ -246,7 +254,7 @@ def getHistograms(model, array_files_to_save, config, num_decimal=None):
 
         finalImg = np.zeros(img.shape, dtype=float)
         
-        for (x, y, window) in utilDataGenerator.sliding_window(img, stepSize=config.step, windowSize=(config.window, config.window)):
+        for (x, y, window) in utilDataGenerator.sliding_window(img, stepSize=config.step-5, windowSize=(config.window, config.window)):
             if window.shape[0] != config.window or window.shape[1] != config.window:
                 continue
 
@@ -262,11 +270,15 @@ def getHistograms(model, array_files_to_save, config, num_decimal=None):
 
             prediction = model.predict(roi)
 
-            finalImg[y:(y + config.window), x:(x + config.window)] = prediction[0].reshape(config.window, config.window)
+            prediction = prediction[:,2:prediction.shape[1]-2,2:prediction.shape[2]-2,:]
+            finalImg[y+2:(y + config.window-2), x+2:(x + config.window-2)] = prediction[0].reshape(config.window-4, config.window-4)
            
             #cv2.imshow("finalImg", (1 - finalImg.astype('uint8')) * 255 )
             #cv2.waitKey(0)
         
+        #util.mkdirp( os.path.dirname("OUTPUT/probs/") )
+        #cv2.imwrite("OUTPUT/probs/06.png", 255-finalImg*255)
+
         tuple_prediction = tuple(finalImg.reshape(1,-1)[0])
 
         if num_decimal is not None:

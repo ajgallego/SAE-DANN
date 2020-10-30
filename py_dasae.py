@@ -182,7 +182,7 @@ def train_and_evaluate(datasets, input_shape, config):
 
     config.modelpath = weights_filename
     _, target_test_folds = utilIO.load_folds_names(config.db2)
-    #utilIO.getHistograms(dann.label_model, target_test_folds, config, None)
+    utilIO.getHistograms(dann.label_model, target_test_folds, config, 1)
 
     # Save output images
     if config.save:
