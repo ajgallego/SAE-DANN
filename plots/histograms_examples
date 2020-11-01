@@ -34,7 +34,7 @@ source_sal_text=texsc(source_sal_text)
 source_dib_text=texsc(source_dib_text)
 source_phi_text=texsc(source_phi_text)
 
-set terminal pdf
+set terminal pdf font ',17'
 set output "histograms_examples.pdf"
 
 
@@ -42,7 +42,7 @@ set output "histograms_examples.pdf"
 set size 1, 1
 set yrange [0.0:100.0]
 set xrange [-1.:11]
-set xlabel "Probability" font ",20"
+set xlabel "Probability" font ",35"
 set grid
 
 set key box center top
@@ -57,10 +57,10 @@ set style line 1 lt 5 lc rgb "olive" lw 2
 set style line 2 lt 5 lc rgb "orange" lw 2
 
 set rmargin 5
-set ylabel '{/Helvetica Number of pixels} (%)'  font ",20"
+set ylabel '{/Helvetica # pixels} (%)'  font ",35"
 set title ""
 
-set origin 0,0
+set origin 0,0.025
 set size 1,1
 
 set tics font "Helvetica,20"
@@ -76,7 +76,6 @@ plot \
 
 
 unset key
-set terminal pdf
 set output "histograms_example_salzinnes.pdf"
 
 set boxwidth 0.75
@@ -85,8 +84,6 @@ set boxwidth 0.75
 plot \
         'data_histograms_examples.txt' every 2 using 1:2 with boxes ls 1 title sal_sal_label
 
-
-set terminal pdf
 set output "histograms_example_dibco.pdf"
 
 plot \

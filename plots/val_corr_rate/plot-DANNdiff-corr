@@ -13,7 +13,7 @@ toscchr(c)= c eq ""  ?  ""  :  substr( SCases.c, strstrt(LCases.c, c), strstrt(L
 texsc(s) = strlen(s) <= 1 ? toscchr(s) : texsc(s[1:strlen(s)/2]).texsc(s[(strlen(s)/2)+1:strlen(s)])
 
 sal_label="Salzinnes"
-dib_label="Dibco"
+dib_label="Dibco2016"
 phi_label="Phi"
 
 sal_label=texsc(sal_label)
@@ -21,7 +21,7 @@ dib_label=texsc(dib_label)
 phi_label=texsc(phi_label)
 
 source_sal_text = "Salzinnes-"
-source_dib_text = "Dibco-"
+source_dib_text = "Dibco2016-"
 source_phi_text = "Phi-"
 
 source_sal_text=texsc(source_sal_text)
@@ -30,7 +30,7 @@ source_phi_text=texsc(source_phi_text)
 
 
 set key font ",17"
-set key spacing 0.725
+set key spacing 0.735
 
 set terminal pdf
 set output "plot_diffF1corr.pdf"
@@ -53,14 +53,14 @@ set key box right top
 
 set style func linespoints
 
-set style line 1 lt 5 lc rgb "red" lw 2 dt 4 pt 5 ps .75
-set style line 2 lt 5 lc rgb "red" lw 2 dt 4 pt 9 ps .85
+set style line 1 lt 5 lc rgb "#28BAFC" lw 2 dt 4 pt 5 ps .75
+set style line 2 lt 5 lc rgb "#28BAFC" lw 2 dt 4 pt 9 ps .85
 
-set style line 3 lt 5 lc rgb "blue" lw 2 dt 4 pt 7 ps .75
-set style line 4 lt 5 lc rgb "blue" lw 2 dt 4 pt 9 ps .85
+set style line 3 lt 5 lc rgb "#D99A23" lw 2 dt 4 pt 7 ps .75
+set style line 4 lt 5 lc rgb "#D99A23" lw 2 dt 4 pt 9 ps .85
 
-set style line 5 lt 5 lc rgb "orange" lw 2 dt 4 pt 7 ps .75
-set style line 6 lt 5 lc rgb "orange" lw 2 dt 4 pt 5 ps .75
+set style line 5 lt 5 lc rgb "#FA4324" lw 2 dt 4 pt 7 ps .75
+set style line 6 lt 5 lc rgb "#FA4324" lw 2 dt 4 pt 5 ps .75
 
 
 
@@ -93,9 +93,9 @@ set size 1,1
 set arrow 1 from 0.6075,3.275 to 1.077,3.275 nohead lc rgb "purple" lt 1
 set arrow 2 from 0.6075,2.65 to 1.077,2.65 nohead lc rgb "purple" lw 1
 
-set label 11 source_sal_text at 0.77, 3.8 left nopoint tc rgb "red" font ",17.75"
-set label 12 source_dib_text at 0.77, 3.18 left nopoint tc rgb "blue" font ",17.75"
-set label 13 source_phi_text at 0.77, 2.55 left nopoint tc rgb "orange" font ",17.75"
+set label 11 source_sal_text at 0.77, 3.82 left nopoint tc rgb "#28BAFC" font ",17.65"
+set label 12 source_dib_text at 0.77, 3.18 left nopoint tc rgb "#D99A23" font ",17.65"
+set label 13 source_phi_text at 0.77, 2.55 left nopoint tc rgb "#FA4324" font ",17.65"
 
 set arrow 6 from -0.2,1 to 1.1,1 nohead dt "." lw 2
 
