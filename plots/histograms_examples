@@ -1,0 +1,90 @@
+reset
+set encoding utf8 # mandatory
+
+
+
+LCases="abcdefghijklmnopqrstuvwxyz"
+SCases="ᴀʙᴄᴅᴇғɢʜɪᴊᴋʟᴍɴᴏᴘǫʀsᴛᴜᴠᴡxʏᴢ"
+
+toscchr(c)= c eq ""  ?  ""  :  substr( SCases.c, strstrt(LCases.c, c), strstrt(LCases.c, c) )
+
+texsc(s) = strlen(s) <= 1 ? toscchr(s) : texsc(s[1:strlen(s)/2]).texsc(s[(strlen(s)/2)+1:strlen(s)])
+
+sal_sal_label="Salzinnes"
+sal_dib_label="Dibco"
+sal_phi_label="PHI"
+dib_sal_label="Sal"
+dib_dib_label="Dibco"
+dib_phi_label="PHI"
+phi_sal_label="Salzinnes"
+phi_dib_label="Dibco"
+phi_phi_label="PHI"
+
+
+sal_sal_label=texsc(sal_sal_label)
+sal_dib_label=texsc(sal_dib_label)
+sal_phi_label=texsc(sal_phi_label)
+dib_sal_label=texsc(dib_sal_label)
+dib_dib_label=texsc(dib_dib_label)
+source_sal_text = "Salzinnes-"
+source_dib_text = "Dibco-"
+source_phi_text = "Phi-"
+
+source_sal_text=texsc(source_sal_text)
+source_dib_text=texsc(source_dib_text)
+source_phi_text=texsc(source_phi_text)
+
+set terminal pdf font ',17'
+set output "histograms_examples.pdf"
+
+
+
+set size 1, 1
+set yrange [0.0:100.0]
+set xrange [-1.:11]
+set xlabel "Probability" font ",35"
+set grid
+
+set key box center top
+
+#
+# define line styles using explicit rgbcolor names
+#
+
+set style func linespoints
+
+set style line 1 lt 5 lc rgb "olive" lw 2
+set style line 2 lt 5 lc rgb "orange" lw 2
+
+set rmargin 5
+set ylabel '{/Helvetica # pixels} (%)'  font ",35"
+set title ""
+
+set origin 0,0.025
+set size 1,1
+
+set tics font "Helvetica,20"
+
+set xtics ("0" 0., "0.1" 1, "0.2" 2, "0.3" 3, "0.4" 4, "0.5" 5, "0.6" 6, "0.7" 7, "0.8" 8, "0.9" 9, "1.0" 10)
+
+set boxwidth 0.45
+set style fill solid
+
+plot \
+        'data_histograms_examples.txt' every 2 using 1:2 with boxes ls 1 title sal_sal_label,\
+        'data_histograms_examples.txt' every 2::1 using 1:2 with boxes ls 2 title sal_dib_label
+
+
+unset key
+set output "histograms_example_salzinnes.pdf"
+
+set boxwidth 0.75
+
+
+plot \
+        'data_histograms_examples.txt' every 2 using 1:2 with boxes ls 1 title sal_sal_label
+
+set output "histograms_example_dibco.pdf"
+
+plot \
+        'data_histograms_examples.txt' every 2::1 using 1:2 with boxes ls 1 title sal_sal_label

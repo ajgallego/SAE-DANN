@@ -16,4 +16,5 @@ ARRAY_DBS =['dibco2016','dibco2014','palm0','palm1','phi','ein','sal','voy','bdi
                         'voy-ic','bdi-ic','all-ic',
                         'sal-oe10',
                         'sal-oe0.4',
-                        'sal-blur30x30']
+                        'sal-blur30x30',
+                        'lrde']

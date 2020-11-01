@@ -32,12 +32,14 @@ options_serial=${options_serial////-}
 
 
 for lda in 0.01; do
-    for source in "sal" "dibco2016" "phi"; do #"sal" "dibco2016" "palm1" "phi"
-        for target in "sal" "dibco2016" "phi" ; do #"sal" "dibco2016" "palm1" "phi"
-            for lda_inc in 0.01; do
-                if [ $source == $target ]; then
-                    continue
-                fi
+    for source in "palm1" ; do #"sal" "dibco2016" "palm1" "phi"
+        for target in "sal" "ein" "dibco2014" "dibco2016" "palm0" "palm1" "phi"; do #"sal" "dibco2016" "palm1" "phi"
+            for lda_inc in 0.1; do
+                #target=${source}
+
+                #if [ $source == $target ]; then
+                #    continue
+                #fi
 
                 output_file="out_${type}_${source}-${target}_w${window}_s${step}_l${layers}_f${filters}_k${kernel}_drop${drop}_lda${lda}_ldainc${lda_inc}_e${e}_b${b}_page${page}${options_serial}_grlpos${grl_pos}_dmodel${domain_model}.txt"
                 echo $output_file

@@ -145,6 +145,7 @@ def train_and_evaluate(datasets, input_shape, config):
                                                         utilConst.CSV_LOGS_DANN_FOLDERNAME,
                                                         config)
         else:
+            #weights_filename = weights_filename.replace("_dmodel2", "")
             print(weights_filename)
             dann.load( weights_filename )  # Load the last save weights...
 
@@ -161,6 +162,7 @@ def train_and_evaluate(datasets, input_shape, config):
                                                         utilConst.CSV_LOGS_CNN_FOLDERNAME,
                                                         config)
             else:
+                
                 dann.label_model.load_weights(weights_filename)
     else:
         raise Exception('Unknown type')
@@ -179,8 +181,19 @@ def train_and_evaluate(datasets, input_shape, config):
     target_best_fm, target_best_th = utilMetrics.calculate_best_fm(pred_target, datasets['target']['y_test'], source_best_th)
 
     config.modelpath = weights_filename
-    _, target_test_folds = utilIO.load_folds_names(config.db2)
-    #utilIO.getHistograms(dann.label_model, target_test_folds, config, None)
+    #_, target_test_folds = utilIO.load_folds_names(config.db2)
+    #utilIO.getHistograms(dann.label_model, target_test_folds, config, 1)
+
+    pred_target = None
+    pred_source = None
+    import gc
+    gc.collect()
+    import innvestigate
+    analyzer = innvestigate.create_analyzer("gradient", dann.label_model)
+    analysis = analyzer.analyze(datasets['target']['x_test'][0])
+
+    print(str(analysis))
+
 
     # Save output images
     if config.save:
@@ -190,7 +203,7 @@ def train_and_evaluate(datasets, input_shape, config):
         utilIO.save_images(dann.label_model, target_test_folds, config)
 
 
-
+    
 
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------

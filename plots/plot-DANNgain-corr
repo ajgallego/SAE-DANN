@@ -1,0 +1,130 @@
+reset
+set encoding utf8 # mandatory
+
+
+
+LCases="abcdefghijklmnopqrstuvwxyz"
+SCases="ᴀʙᴄᴅᴇғɢʜɪᴊᴋʟᴍɴᴏᴘǫʀsᴛᴜᴠᴡxʏᴢ"
+
+toscchr(c)= c eq ""  ?  ""  :  substr( SCases.c, strstrt(LCases.c, c), strstrt(LCases.c, c) )
+
+texsc(s) = strlen(s) <= 1 ? toscchr(s) : texsc(s[1:strlen(s)/2]).texsc(s[(strlen(s)/2)+1:strlen(s)])
+
+sal_label="Salzinnes"
+dib_label="Dibco"
+phi_label="Phi"
+
+sal_label=texsc(sal_label)
+dib_label=texsc(dib_label)
+phi_label=texsc(phi_label)
+
+source_sal_text = "Salzinnes-"
+source_dib_text = "Dibco-"
+source_phi_text = "Phi-"
+
+source_sal_text=texsc(source_sal_text)
+source_dib_text=texsc(source_dib_text)
+source_phi_text=texsc(source_phi_text)
+
+set terminal pdf
+set output "plot_DANNgain_F1corr.pdf"
+
+set multiplot
+
+
+
+set size 1, 1
+set yrange [0.0:100.0]
+set xrange [0.0:1.0]
+set xlabel "Correlation coefficient"
+set grid
+
+set key box center bottom
+
+#
+# define line styles using explicit rgbcolor names
+#
+
+set style func linespoints
+
+set style line 1 lt 5 lc rgb "red" lw 2 dt 4 pt 7 ps .75
+set style line 2 lt 5 lc rgb "red" lw 2 dt 4 pt 5 ps .75
+set style line 3 lt 5 lc rgb "red" lw 2 dt 4 pt 9 ps .85
+
+set style line 4 lt 5 lc rgb "blue" lw 2 dt 4 pt 7 ps .75
+set style line 5 lt 5 lc rgb "blue" lw 2 dt 4 pt 5 ps .75
+set style line 6 lt 5 lc rgb "blue" lw 2 dt 4 pt 9 ps .85
+
+set style line 7 lt 5 lc rgb "orange" lw 2 dt 4 pt 7 ps .75
+set style line 8 lt 5 lc rgb "orange" lw 2 dt 4 pt 5 ps .75
+set style line 9 lt 5 lc rgb "orange" lw 2 dt 4 pt 9 ps .85
+
+set style line 10 lt 5 lc rgb "red" lw 2 dt 4 pt 19 ps .75
+set style line 11 lt 5 lc rgb "red" lw 2 dt 4 pt 23 ps .85
+set style line 12 lt 5 lc rgb "blue" lw 2 dt 4 pt 6 ps .75
+set style line 13 lt 5 lc rgb "blue" lw 2 dt 4 pt 23 ps .85
+set style line 14 lt 5 lc rgb "orange" lw 2 dt 4 pt 6 ps .75
+set style line 15 lt 5 lc rgb "orange" lw 2 dt 4 pt 19 ps .85
+
+
+set rmargin 5
+set ylabel '{/Helvetica F@_{{/*0.05 &{c}}1}} (%)'
+set title ""
+
+
+set origin 0,0
+set size 1,1
+
+#set object 1 rect from 16,88.2 to 22,85.5 back dt "."
+#set object 1 rect fc rgb "cyan" fillstyle empty
+
+#set arrow 1 from 22,85.5 to 58,85.1 nohead dt "." 
+#set arrow 2 from 22,88.2 to 58,88.8 nohead dt "." 
+
+
+
+
+
+# Implements a 'textsc' function like in (La)TeX.
+# Based on original answer at https://stackoverflow.com/a/54174759/11369382
+
+
+
+
+set arrow 1 from 0.365,44.0 to 0.64,44. nohead lc rgb "purple" lt 1
+set arrow 2 from 0.365,23. to 0.64,23. nohead lc rgb "purple" lw 1
+
+set arrow 3 from 0.,95.8 to 1.,95.8 nohead dt "-" lc rgb "red" lw 2
+set arrow 4 from 0.,80.8 to 1.,80.8 nohead dt "-" lc rgb "blue" lw 2
+set arrow 5 from 0.,84.49 to 1.,84.49 nohead dt "-" lc rgb "orange" lw 2
+
+set label 11 source_sal_text at 0.365, 62.5 left nopoint tc rgb "red"
+set label 12 source_dib_text at 0.365, 41.5 left nopoint tc rgb "blue"
+set label 13 source_phi_text at 0.365, 20.25 left nopoint tc rgb "orange"
+
+#set arrow 6 from 2.5,90.54 to 32.5, 90.54 nohead dt "." 
+
+
+plot \
+        "+" u 1:(NaN) title " " w dots linecolor rgb "white",\
+        'data-f1-corr.txt' using 2:1 with point ls 1 title sal_label,\
+        'data-f1-corr.txt' using 4:3 with point ls 2 title dib_label,\
+        'data-f1-corr.txt' using 6:5 with point ls 3 title phi_label,\
+        "+" u 1:(NaN) title " " w dots linecolor rgb "white",\
+        'data-f1-corr.txt' using 8:7 with point ls 4 title sal_label,\
+        'data-f1-corr.txt' using 10:9 with point ls 5 title dib_label,\
+        'data-f1-corr.txt' using 12:11 with point ls 6 title phi_label,\
+        "+" u 1:(NaN) title " " w dots linecolor rgb "white",\
+        'data-f1-corr.txt' using 14:13 with point ls 7 title sal_label,\
+        'data-f1-corr.txt' using 16:15 with point ls 8 title dib_label,\
+        'data-f1-corr.txt' using 18:17 with point ls 9 title phi_label,\
+        'data-DANN.txt' using 2:1 with point ls 10 title "",\
+        'data-DANN.txt' using 4:3 with point ls 11 title "",\
+        'data-DANN.txt' using 6:5 with point ls 12 title "",\
+        'data-DANN.txt' using 8:7 with point ls 13 title "",\
+        'data-DANN.txt' using 10:9 with point ls 14 title "",\
+        'data-DANN.txt' using 12:11 with point ls 15 title ""
+        
+
+
+
