@@ -59,7 +59,11 @@ def run_test(y_pred, y_gt, threshold=.5):
     prediction = y_pred.copy()
     gt = y_gt.copy()
 
-    prediction = (prediction > threshold)
+    if threshold is not None:
+        prediction = (prediction > threshold)
+    else:
+        prediction = (prediction > 0.5)
+
     gt = gt > 0.5
 
     #gt = np.logical_not(gt)    # Invert the matrix so that the 1 are the positive class
@@ -84,7 +88,13 @@ def run_test(y_pred, y_gt, threshold=.5):
 def calculate_best_fm(y_pred, y_test, args_th=-1):
     best_fm = -1
     best_th = -1
-    if args_th == -1:
+    if args_th is None:
+        results = run_test(y_pred, y_test, threshold=args_th)
+        best_fm = results['fm']
+        best_th = args_th
+        print('Threshold:', best_th)
+        print('Fm: {:0.4f}'.format(best_fm))
+    elif args_th == -1:
         for i in range(11):
             th = float(i) / 10.0
             #print('Threshold:', th)

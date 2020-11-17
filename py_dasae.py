@@ -8,6 +8,7 @@ os.environ['CUDA_VISIBLE_DEVICES']=gpu
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Disable Tensorflow CUDA load statements
 warnings.filterwarnings('ignore')
 
+import copy
 import os
 import argparse
 import numpy as np
@@ -50,7 +51,7 @@ util.mkdirp( utilConst.WEIGHTS_DANN_FOLDERNAME + '/truncated')
 # ----------------------------------------------------------------------------
 def menu():
     parser = argparse.ArgumentParser(description='DA SAE')
-    parser.add_argument('-type',   default='dann', type=str,     choices=['dann', 'cnn'],  help='Training type')
+    parser.add_argument('-type',   default='dann', type=str,     choices=['dann', 'cnn', 'autodann'],  help='Training type')
 
     parser.add_argument('-path',  required=True,   help='base path to datasets')
     parser.add_argument('-db1',       required=True,  choices=utilConst.ARRAY_DBS, help='Database name')
@@ -131,9 +132,11 @@ def load_data(path, db, window, step, page_size, is_test, truncate):
 def train_and_evaluate(datasets, input_shape, config):
     summary = config.type == 'dann'
     weights_filename = None
-    dann = utilDANNModel.DANNModel(input_shape, config, summary)
+    model_dann = utilDANNModel.DANNModel(input_shape, config, summary)
+    model_cnn = utilDANNModel.DANNModel(input_shape, config, summary)
 
     if config.type == 'dann':
+        dann = model_dann
         weights_filename = utilDANN.get_dann_weights_filename( utilConst.WEIGHTS_DANN_FOLDERNAME,
                                                                                                         datasets['source']['name'],
                                                                                                         datasets['target']['name'], config)
@@ -150,58 +153,139 @@ def train_and_evaluate(datasets, input_shape, config):
             dann.load( weights_filename )  # Load the last save weights...
 
     elif config.type == 'cnn':
-            print('Train SAE (without DA)...')
-            print(dann.label_model.summary())
-            weights_filename = utilCNN.get_cnn_weights_filename( utilConst.WEIGHTS_CNN_FOLDERNAME,
-                                                                                                                    datasets['source']['name'], config)
+        dann = model_cnn
+        print('Train SAE (without DA)...')
+        print(dann.label_model.summary())
+        weights_filename = utilCNN.get_cnn_weights_filename( utilConst.WEIGHTS_CNN_FOLDERNAME, datasets['source']['name'], config)
 
-            if config.test == False:
-                utilCNN.train_cnn(dann.label_model,  datasets['source'], datasets['target'],
-                                                        weights_filename,
-                                                        utilConst.LOGS_CNN_FOLDERNAME,
-                                                        utilConst.CSV_LOGS_CNN_FOLDERNAME,
-                                                        config)
-            else:
-                
-                dann.label_model.load_weights(weights_filename)
+        if config.test == False:
+            utilCNN.train_cnn(dann.label_model,  datasets['source'], datasets['target'],
+                                                    weights_filename,
+                                                    utilConst.LOGS_CNN_FOLDERNAME,
+                                                    utilConst.CSV_LOGS_CNN_FOLDERNAME,
+                                                    config)
+        else:
+            
+            dann.label_model.load_weights(weights_filename)
+    elif config.type == 'autodann':
+        assert(config.test == True)
+        dann = None
+
+        config_dann = copy.deepcopy(config)
+        config_dann.type = 'dann'
+
+        config_cnn = copy.deepcopy(config)
+        config_cnn.type = 'cnn'
+
+        weights_filename_dann = utilDANN.get_dann_weights_filename( utilConst.WEIGHTS_DANN_FOLDERNAME, datasets['source']['name'], datasets['target']['name'], config_dann)
+        weights_filename_cnn = utilCNN.get_cnn_weights_filename( utilConst.WEIGHTS_CNN_FOLDERNAME, datasets['source']['name'], config_cnn)
+
+        model_dann.load( weights_filename_dann )
+        model_cnn.label_model.load_weights(weights_filename_cnn)
+
     else:
         raise Exception('Unknown type')
 
     batch=1
-    print('# Evaluate...')
-    source_loss, source_mse = dann.label_model.evaluate(datasets['source']['x_test'], datasets['source']['y_test'], batch_size=batch, verbose=0)
-    target_loss, target_mse = dann.label_model.evaluate(datasets['target']['x_test'], datasets['target']['y_test'], batch_size=batch, verbose=0)
-    print('Result: {}\t{}\t{:.4f}\t{:.4f}'.format(datasets['source']['name'], datasets['target']['name'], source_mse, target_mse))
+    if dann is not None:
+        print('# Evaluate...')
+        source_loss, source_mse = dann.label_model.evaluate(datasets['source']['x_test'], datasets['source']['y_test'], batch_size=batch, verbose=0)
+        target_loss, target_mse = dann.label_model.evaluate(datasets['target']['x_test'], datasets['target']['y_test'], batch_size=batch, verbose=0)
+        print('Result: {}\t{}\t{:.4f}\t{:.4f}'.format(datasets['source']['name'], datasets['target']['name'], source_mse, target_mse))
 
-    pred_source = dann.label_model.predict(datasets['source']['x_test'], batch_size=batch, verbose=0)
-    pred_target = dann.label_model.predict(datasets['target']['x_test'], batch_size=batch, verbose=0)
-    print('SOURCE:')
-    source_best_fm, source_best_th = utilMetrics.calculate_best_fm(pred_source, datasets['source']['y_test'])
-    print('TARGET:')
-    target_best_fm, target_best_th = utilMetrics.calculate_best_fm(pred_target, datasets['target']['y_test'], source_best_th)
+        pred_source = dann.label_model.predict(datasets['source']['x_test'], batch_size=batch, verbose=0)
+        pred_target = dann.label_model.predict(datasets['target']['x_test'], batch_size=batch, verbose=0)
+        print('SOURCE:')
+        source_best_fm, source_best_th = utilMetrics.calculate_best_fm(pred_source, datasets['source']['y_test'])
+        print('TARGET:')
+        target_best_fm, target_best_th = utilMetrics.calculate_best_fm(pred_target, datasets['target']['y_test'], source_best_th)
 
-    config.modelpath = weights_filename
-    #_, target_test_folds = utilIO.load_folds_names(config.db2)
-    #utilIO.getHistograms(dann.label_model, target_test_folds, config, 1)
-
-    pred_target = None
-    pred_source = None
-    import gc
-    gc.collect()
-    import innvestigate
-    analyzer = innvestigate.create_analyzer("gradient", dann.label_model)
-    analysis = analyzer.analyze(datasets['target']['x_test'][0])
-
-    print(str(analysis))
-
-
-    # Save output images
-    if config.save:
         config.modelpath = weights_filename
-        config.threshold = target_best_th
         _, target_test_folds = utilIO.load_folds_names(config.db2)
-        utilIO.save_images(dann.label_model, target_test_folds, config)
+        utilIO.getHistograms(dann.label_model, target_test_folds, config, source_best_th, 1)
 
+        # Save output images
+        if config.save:
+            config.modelpath = weights_filename
+            config.threshold = target_best_th
+            _, target_test_folds = utilIO.load_folds_names(config.db2)
+            utilIO.save_images(dann.label_model, target_test_folds, config)
+    else:
+        #AUTODANN
+
+        pathdir_results = "OUTPUT/auto_dann/probs/" + str(config.db1) +"-"+ str(config.db2) + "/" + "results_sample_level.txt"
+
+        content_results_file = utilIO.readString(pathdir_results)
+        if content_results_file == False:
+
+            pred_source_dann = model_dann.label_model.predict(datasets['source']['x_test'], batch_size=batch, verbose=0)
+            pred_target_dann = model_dann.label_model.predict(datasets['target']['x_test'], batch_size=batch, verbose=0)
+
+            pred_source_cnn = model_cnn.label_model.predict(datasets['source']['x_test'], batch_size=batch, verbose=0)
+            pred_target_cnn = model_cnn.label_model.predict(datasets['target']['x_test'], batch_size=batch, verbose=0)
+
+            print('SOURCE CNN:')
+            source_best_fm_cnn, source_best_th_cnn = utilMetrics.calculate_best_fm(pred_source_cnn, datasets['source']['y_test'])
+            print('TARGET CNN:')
+            target_best_fm_cnn, target_best_th_cnn = utilMetrics.calculate_best_fm(pred_target_cnn, datasets['target']['y_test'], source_best_th_cnn)
+
+            print('SOURCE DANN:')
+            source_best_fm_dann, source_best_th_dann = utilMetrics.calculate_best_fm(pred_source_dann, datasets['source']['y_test'])
+            print('TARGET DANN:')
+            target_best_fm_dann, target_best_th_dann = utilMetrics.calculate_best_fm(pred_target_dann, datasets['target']['y_test'], source_best_th_dann)
+        
+            str_results = str(source_best_fm_cnn) + "\n"
+            str_results += str(source_best_th_cnn) + "\n"
+            
+            str_results += str(target_best_fm_cnn) + "\n"
+            str_results += str(target_best_th_cnn) + "\n"
+
+            str_results += str(source_best_fm_dann) + "\n"
+            str_results += str(source_best_th_dann) + "\n"
+            
+            str_results += str(target_best_fm_dann) + "\n"
+            str_results += str(target_best_th_dann) + "\n"
+
+            
+            utilIO.saveString(str_results, pathdir_results, True)
+        else:
+            print('SOURCE CNN:')
+            source_best_fm_cnn = float(content_results_file[0])
+            source_best_th_cnn = float(content_results_file[1])
+            print ("f1: " + str(source_best_fm_cnn) + "\tth: " + str(source_best_th_cnn))
+
+            print('TARGET CNN:')
+            target_best_fm_cnn = float(content_results_file[2])
+            target_best_th_cnn = float(content_results_file[3])
+            print ("f1: " + str(target_best_fm_cnn) + "\tth: " + str(target_best_th_cnn))
+
+            print('SOURCE DANN:')
+            source_best_fm_dann = float(content_results_file[4])
+            source_best_th_dann = float(content_results_file[5])
+            print ("f1: " + str(source_best_fm_dann) + "\tth: " + str(source_best_th_dann))
+        
+            print('TARGET DANN:')
+            target_best_fm_dann = float(content_results_file[6])
+            target_best_th_dann = float(content_results_file[7])
+            print ("f1: " + str(target_best_fm_dann) + "\tth: " + str(target_best_th_dann))
+
+        _, source_test_folds = utilIO.load_folds_names(config.db1)
+        histogram_source_cnn = utilIO.getHistogramDomain(source_test_folds, model_cnn.label_model, config, 1)
+
+        _, target_test_folds = utilIO.load_folds_names(config.db2)
+        config.modelpath = "auto_dann_" + weights_filename_cnn + weights_filename_dann
+
+        utilIO.predictAUTODann(
+                        model_dann.label_model, 
+                        model_cnn.label_model, 
+                        config, 
+                        target_test_folds, 
+                        datasets['target']['y_test'],
+                        source_best_th_cnn, 
+                        source_best_th_dann, 
+                        0.25, #threshold_correl_pearson, 
+                        histogram_source_cnn, 
+                        1)
 
     
 
