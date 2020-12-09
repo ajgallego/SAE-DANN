@@ -2,7 +2,7 @@ reset
 set encoding utf8 # mandatory
 
 
-set tics font "Helvetica,21"
+set tics font "Helvetica,22"
 set font "Helvetica,22"
 
 LCases="abcdefghijklmnopqrstuvwxyz"
@@ -13,7 +13,7 @@ toscchr(c)= c eq ""  ?  ""  :  substr( SCases.c, strstrt(LCases.c, c), strstrt(L
 texsc(s) = strlen(s) <= 1 ? toscchr(s) : texsc(s[1:strlen(s)/2]).texsc(s[(strlen(s)/2)+1:strlen(s)])
 
 set key font ",17"
-set key spacing 0.95 width -3.8
+
 
 set terminal pdf
 set output "plot_val_corr_f1.pdf"
@@ -21,12 +21,13 @@ set output "plot_val_corr_f1.pdf"
 
 #set logscale y
 set size 1, 1
-set yrange [0.2:1.0]
+set yrange [0.48:0.72]
 set xrange [-1.1:1.1]
-set xlabel "Correlation coefficient" font "Helvetica,22"
+set xlabel "Correlation threshold ({/:Italic {/Symbol \\162}}_{th})" font "Helvetica,22"
 set grid
 
-set key box left top
+set key vert
+set key outside top center
 
 #
 # define line styles using explicit rgbcolor names
@@ -36,7 +37,8 @@ set style func linespoints
 
 set style line 1 lt 5 lc rgb "#FC2B51" lw 2 dt 1 pt 6 ps .75
 set style line 2 lt 5 lc rgb "#FECD1E" lw 2 dt 5 pt 5 ps .75
-set style line 3 lt 5 lc rgb "#1E5BFE" lw 2 dt 4 pt 9 ps .85
+set style line 3 lt 5 lc rgb "#1E5BFE" lw 2 dt 1 pt 9 ps .85
+set style line 4 lt 5 lc rgb "#12AAAE" lw 2 dt 1 pt 2 ps .85
 
 
 set rmargin 5
@@ -51,9 +53,8 @@ set size 1,1
 
 plot \
         'val_data.txt' using 1:4 with linespoint ls 3 title "SAE",\
-        'val_data.txt' using 1:3 with linespoint ls 2 notitle,\
-        'val_data.txt' using 1:2 with linespoint ls 1 title "AutoBin-DANN",\
-        NaN with linespoint title 'Binarization switch' ls 2 
+        'val_data.txt' using 1:5 with linespoint ls 4 title "Bin-DANN",\
+        'val_data.txt' using 1:2 with linespoint ls 1 title "AutoBin-DANN"
 
 
 

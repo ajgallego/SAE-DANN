@@ -37,7 +37,7 @@ set multiplot
 set size 1, 1
 set yrange [0:4.0]
 set xrange [-0.4:1.1]
-set xlabel "Correlation coefficient" font "Helvetica,22"
+set xlabel "Correlation coefficient ({/:Italic {/Symbol \\162}}_{S,T})" font "Helvetica,22"
 set grid
 
 set key box right top
