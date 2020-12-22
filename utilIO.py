@@ -418,33 +418,22 @@ def getHistogramDomain(array_files, model, config, num_decimal=None):
 
     return histogram_domain
 
-def predictAUTODann(
-                model_dann, 
-                model_cnn, 
-                config, 
-                array_files_to_save, 
-                target_data,
-                threshold_cnn, 
-                threshold_dann, 
-                threshold_correl_pearson, 
-                histogram_source_cnn, 
-                num_decimal=None):
-    print('Calculating AUTODANN...')
 
-    #Histogram for source
-    list_histogram_source_cnn = histogram_source_cnn.values()
-    number_pixels_source = sum(list_histogram_source_cnn)
-    normalized_list_histogram_source_cnn = [number / float(number_pixels_source) for number in list_histogram_source_cnn]
+
+def predictSAE(
+                        model_cnn, 
+                        config, 
+                        target_test_folds, 
+                        source_best_th_cnn, 
+                        threshold_correl_pearson, 
+                        num_decimal=None):
+
+    print('Calculating SAE...')
 
     array_files = load_array_of_files(config.path, array_files_to_save)
 
-    list_target_best_fm_autodann = []
     list_target_best_fm_cnn = []
-    list_target_best_fm_dann = []
-
-    list_target_best_fm_autodann_inv = []
     list_target_best_fm_cnn_inv = []
-    list_target_best_fm_dann_inv = []
 
     for fname in array_files:
         print('Processing image', fname)
@@ -453,8 +442,259 @@ def predictAUTODann(
         img = cv2.imread(fname, cv2.IMREAD_GRAYSCALE)
         gt = cv2.imread(fname_gt, cv2.IMREAD_GRAYSCALE)
 
-        rows = img.shape[0]
-        cols = img.shape[1]
+        if img.shape[0] < config.window or img.shape[1] < config.window:
+            new_rows = config.window if img.shape[0] < config.window else img.shape[0]
+            new_cols = config.window if img.shape[1] < config.window else img.shape[1]
+            img = cv2.resize(img, (new_cols, new_rows), interpolation = cv2.INTER_CUBIC)
+
+        finalImg = np.zeros(img.shape, dtype=float)
+        finalImg_bin = np.zeros(img.shape, dtype=float)
+
+        finalImg_cnn = np.zeros(img.shape, dtype=float)
+        finalImg_bin_cnn = np.zeros(img.shape, dtype=float)
+        
+        for (x, y, window) in utilDataGenerator.sliding_window(img, stepSize=config.window-5, windowSize=(config.window, config.window)):
+            if window.shape[0] != config.window or window.shape[1] != config.window:
+                continue
+
+            roi = img[y:(y + config.window), x:(x + config.window)].copy()
+
+            roi = roi.reshape(1, config.window, config.window, 1)
+            roi = roi.astype('float32')
+            norm_type = '255'
+            roi = utilDataGenerator.normalize_data( roi, norm_type )
+
+            prediction_cnn = model_cnn.predict(roi)
+            prediction_cnn = prediction_cnn[:,2:prediction_cnn.shape[1]-2,2:prediction_cnn.shape[2]-2,:]
+            sample_prediction_cnn = prediction_cnn[0].reshape(config.window-4, config.window-4)
+            sample_prediction = sample_prediction_cnn
+            
+            finalImg[y+2:(y + config.window-2), x+2:(x + config.window-2)] = sample_prediction
+            finalImg_bin[y+2:(y + config.window-2), x+2:(x + config.window-2)] = (sample_prediction < threshold)
+
+            finalImg_cnn[y+2:(y + config.window-2), x+2:(x + config.window-2)] = sample_prediction_cnn
+            finalImg_bin_cnn[y+2:(y + config.window-2), x+2:(x + config.window-2)] = (sample_prediction_cnn < threshold_cnn)
+
+        
+        import ntpath
+        filename = ntpath.basename(fname)
+        filename_out = filename.replace(".", "_"+str(config.type) + ".")
+        filename_out_cnn = filename.replace(".", "_"+str(config.type) + "_cnn.")
+        
+        pathdir_outimage = "OUTPUT/sae/probs/" + str(config.db1) +"-"+ str(config.db2) + "/"
+
+        util.mkdirp( os.path.dirname(pathdir_outimage) )
+        cv2.imwrite(pathdir_outimage + str(filename_out), finalImg_bin*255)
+        cv2.imwrite(pathdir_outimage + str(filename), 255-img*255)
+        cv2.imwrite(pathdir_outimage + str(filename_out_cnn), finalImg_bin_cnn*255)
+
+        finalImg_bin = (finalImg_bin>source_best_th_cnn)
+        finalImg_bin_cnn = (finalImg_bin_cnn>source_best_th_cnn)
+        gt = (gt > 0.5)
+
+        finalImg_bin_inv = (finalImg_bin<=source_best_th_cnn)
+        finalImg_bin_cnn_inv = (finalImg_bin_cnn<=source_best_th_cnn)
+        gt_inv = (gt <= 0.5)
+
+        print ("SAE:")
+        target_best_fm_cnn, _ = utilMetrics.calculate_best_fm(finalImg_bin_cnn, gt, None)
+        
+        list_target_best_fm_cnn.append(target_best_fm_cnn)
+
+    print ("F1 at page-level")
+    
+    str_f1 = "SAE:\t"
+    str_f1 += str(list_target_best_fm_cnn)
+    
+    avg_cnn = np.average(list_target_best_fm_cnn)
+
+    str_f1 +=  ("\nAVERAGE SAE\n")
+    str_f1 +=  (str(avg_cnn))
+
+    print(str_f1)
+    pathdir_F1 = "OUTPUT/sae/probs/" + str(config.db1) +"-"+ str(config.db2) + "/" + "f1.txt"
+    saveString(str_f1, pathdir_F1, True)
+    
+    return avg_cnn
+
+
+def predictModelAtFullPage(
+                        model, 
+                        config, 
+                        model_type,
+                        array_files, 
+                        source_best_th, 
+                        num_decimal=None):
+    print('Calculating ' + str(model_type) + '...')
+
+    array_files = load_array_of_files(config.path, array_files)
+
+    list_target_best_fm = []
+
+    for fname in array_files:
+        print('Processing image', fname)
+
+        fname_gt = fname.replace(utilConst.X_SUFIX, utilConst.Y_SUFIX)
+        img = cv2.imread(fname, cv2.IMREAD_GRAYSCALE)
+        gt = cv2.imread(fname_gt, cv2.IMREAD_GRAYSCALE)
+
+        if img.shape[0] < config.window or img.shape[1] < config.window:
+            new_rows = config.window if img.shape[0] < config.window else img.shape[0]
+            new_cols = config.window if img.shape[1] < config.window else img.shape[1]
+            img = cv2.resize(img, (new_cols, new_rows), interpolation = cv2.INTER_CUBIC)
+
+        finalImg_prob = np.zeros(img.shape, dtype=float)
+        finalImg_bin = np.zeros(img.shape, dtype=float)
+        
+        for (x, y, window) in utilDataGenerator.sliding_window(img, stepSize=config.window-5, windowSize=(config.window, config.window)):
+            if window.shape[0] != config.window or window.shape[1] != config.window:
+                continue
+
+            roi = img[y:(y + config.window), x:(x + config.window)].copy()
+
+            roi = roi.reshape(1, config.window, config.window, 1)
+            roi = roi.astype('float32')
+            norm_type = '255'
+            roi = utilDataGenerator.normalize_data( roi, norm_type )
+
+            prediction_cnn = model.predict(roi)
+            prediction_cnn = prediction_cnn[:,2:prediction_cnn.shape[1]-2,2:prediction_cnn.shape[2]-2,:]
+            sample_prediction_cnn = prediction_cnn[0].reshape(config.window-4, config.window-4)
+            
+            finalImg_prob[y+2:(y + config.window-2), x+2:(x + config.window-2)] = sample_prediction_cnn
+            finalImg_bin[y+2:(y + config.window-2), x+2:(x + config.window-2)] = (sample_prediction_cnn < source_best_th)
+
+        
+        import ntpath
+        filename = ntpath.basename(fname)
+        filename_out_prob = filename.replace(".", "_"+str(config.type) + ".")
+        filename_out_cnn = filename.replace(".", "_"+str(config.type) + "_"+ str(model_type) + ".")
+        
+        pathdir_outimage = "OUTPUT/" + str(model_type) + "/probs/" + str(config.db1) +"-"+ str(config.db2) + "/"
+
+        util.mkdirp( os.path.dirname(pathdir_outimage) )
+        cv2.imwrite(pathdir_outimage + str(filename_out_prob), finalImg_prob*255)
+        cv2.imwrite(pathdir_outimage + str(filename), 255-img*255)
+        cv2.imwrite(pathdir_outimage + str(filename_out_cnn), finalImg_bin*255)
+
+        finalImg_bin = (finalImg_bin>source_best_th)
+        finalImg_bin = (finalImg_bin>source_best_th)
+        gt = (gt > 0.5)
+
+        print ("F1 at sample-level:")
+        target_best_fm_cnn, _ = utilMetrics.calculate_best_fm(finalImg_bin, gt, None)
+        
+        list_target_best_fm.append(target_best_fm_cnn)
+
+    str_f1 = "F1 at page-level:\t"
+    str_f1 += str(list_target_best_fm)
+    
+    avg_cnn = np.average(list_target_best_fm)
+
+    str_f1 +=  ("\nAVERAGE " + str(model_type) +  "\n")
+    str_f1 +=  (str(avg_cnn))
+
+    print(str_f1)
+    pathdir_F1 = "OUTPUT/" + str(model_type) + "/probs/" + str(config.db1) +"-"+ str(config.db2) + "/" + "f1.txt"
+    saveString(str_f1, pathdir_F1, True)
+    
+    return avg_cnn
+
+
+def predictAutoDANN_AtSampleLevel(
+                        model_dann, 
+                        model_cnn,
+                        config, 
+                        x_test_samples,
+                        source_best_th_cnn, 
+                        source_best_th_dann,
+                        threshold_correl_pearson,
+                        histogram_source_cnn,
+                        num_decimal):
+    predicts_auto = []
+
+    #Histogram for source
+    list_histogram_source_cnn = histogram_source_cnn.values()
+    number_pixels_source = sum(list_histogram_source_cnn)
+    normalized_list_histogram_source_cnn = [number / float(number_pixels_source) for number in list_histogram_source_cnn]
+    
+    for x_test_sample in x_test_samples:
+        
+        list_x_test_sample = list()
+        list_x_test_sample.append(x_test_sample)
+        list_x_test_sample_array = np.asarray(list_x_test_sample)
+
+        prediction_cnn = model_cnn.predict(list_x_test_sample_array)
+        sample_prediction_cnn = prediction_cnn[0].reshape(config.window, config.window)
+
+        #Histogram for target
+        histogram_prediction_cnn = getHistogramBins(prediction_cnn, num_decimal)
+        list_histogram_prediction_cnn = histogram_prediction_cnn.values()
+        number_pixels_target = sum(list_histogram_prediction_cnn)
+
+        normalized_list_histogram_prediction_cnn = [number / float(number_pixels_target) for number in list_histogram_prediction_cnn]
+
+        correl_pearson = np.corrcoef(normalized_list_histogram_prediction_cnn, normalized_list_histogram_source_cnn)[0, 1]
+
+        prediction_dann = model_dann.predict(list_x_test_sample_array)
+        sample_prediction_dann = prediction_dann[0].reshape(config.window, config.window)
+        
+        if correl_pearson > threshold_correl_pearson:
+            #SAE
+            threshold = source_best_th_cnn
+            sample_prediction = sample_prediction_cnn
+
+        else:
+            #DANN
+            threshold = source_best_th_dann
+            sample_prediction = sample_prediction_dann
+
+        predicts_auto.append(sample_prediction > threshold)
+
+    return np.asarray(predicts_auto)
+        
+def predictAUTODann(
+                model_dann, 
+                model_cnn, 
+                config, 
+                array_files_to_save, 
+                threshold_cnn, 
+                threshold_dann, 
+                threshold_correl_pearson, 
+                histogram_source_cnn, 
+                histogram_target_cnn,
+                num_decimal=None):
+    print('Calculating AUTODANN...')
+
+    #Histogram for source
+    list_histogram_source_cnn = [histogram_source_cnn[round(float(number)/len(histogram_source_cnn), 1)] for number in range(len(histogram_source_cnn))]
+    number_pixels_source = sum(list_histogram_source_cnn)
+    normalized_list_histogram_source_cnn = [number / float(number_pixels_source) for number in list_histogram_source_cnn]
+
+    list_histogram_target_cnn = [histogram_target_cnn[round(float(number)/len(histogram_target_cnn), 1)] for number in range(len(histogram_target_cnn))]
+    number_pixels_target = sum(list_histogram_target_cnn)
+    normalized_list_histogram_target_cnn = [number / float(number_pixels_target) for number in list_histogram_target_cnn]
+
+    print ("------------------------Normalized global histograms---------------------------")
+    print (config.db1)
+    print(normalized_list_histogram_source_cnn)
+    print (config.db2)
+    print(normalized_list_histogram_target_cnn)
+
+
+    array_files = load_array_of_files(config.path, array_files_to_save)
+
+    list_target_best_fm_autodann = []
+    list_target_best_fm_cnn = []
+    list_target_best_fm_dann = []
+
+    for fname in array_files:
+        print('Processing image', fname)
+
+        fname_gt = fname.replace(utilConst.X_SUFIX, utilConst.Y_SUFIX)
+        img = cv2.imread(fname, cv2.IMREAD_GRAYSCALE)
+        gt = cv2.imread(fname_gt, cv2.IMREAD_GRAYSCALE)
+
         if img.shape[0] < config.window or img.shape[1] < config.window:
             new_rows = config.window if img.shape[0] < config.window else img.shape[0]
             new_cols = config.window if img.shape[1] < config.window else img.shape[1]
@@ -469,6 +709,7 @@ def predictAUTODann(
 
         finalImg_cnn = np.zeros(img.shape, dtype=float)
         finalImg_dann = np.zeros(img.shape, dtype=float)
+        
         finalImg_bin_cnn = np.zeros(img.shape, dtype=float)
         finalImg_bin_dann = np.zeros(img.shape, dtype=float)
         
@@ -574,15 +815,12 @@ def predictAUTODann(
 
         saveString(str_histogram, out_histogram_filename, True)
 
-        finalImg_bin = (finalImg_bin>0.5)
-        finalImg_bin_cnn = (finalImg_bin_cnn>0.5)
-        finalImg_bin_dann = (finalImg_bin_dann>0.5)
-        gt = (gt > 0.5)
+        finalImg_bin = (finalImg_bin<0.5)
+        finalImg_bin_cnn = (finalImg_bin_cnn<0.5)
+        finalImg_bin_dann = (finalImg_bin_dann<0.5)
+        gt = (gt < 0.5)
 
-        finalImg_bin_inv = (finalImg_bin<=0.5)
-        finalImg_bin_cnn_inv = (finalImg_bin_cnn<=0.5)
-        finalImg_bin_dann_inv = (finalImg_bin_dann<=0.5)
-        gt_inv = (gt <= 0.5)
+        print ("F1 at sample-level:")
 
         target_best_fm_autodann, _ = utilMetrics.calculate_best_fm(finalImg_bin, gt, None)
         print ("SAE:")
@@ -590,19 +828,9 @@ def predictAUTODann(
         print ("DANN:")
         target_best_fm_dann, _ = utilMetrics.calculate_best_fm(finalImg_bin_dann, gt, None)
 
-        target_best_fm_autodann_inv, _ = utilMetrics.calculate_best_fm(finalImg_bin_inv, gt_inv, None)
-        print ("SAE:")
-        target_best_fm_cnn_inv, _ = utilMetrics.calculate_best_fm(finalImg_bin_cnn_inv, gt_inv, None)
-        print ("DANN:")
-        target_best_fm_dann_inv, _ = utilMetrics.calculate_best_fm(finalImg_bin_dann_inv, gt_inv, None)
-
         list_target_best_fm_autodann.append(target_best_fm_autodann)
         list_target_best_fm_cnn.append(target_best_fm_cnn)
         list_target_best_fm_dann.append(target_best_fm_dann)
-
-        list_target_best_fm_autodann_inv.append(target_best_fm_autodann_inv)
-        list_target_best_fm_cnn_inv.append(target_best_fm_cnn_inv)
-        list_target_best_fm_dann_inv.append(target_best_fm_dann_inv)
 
     print ("F1 at page-level")
     
@@ -615,34 +843,17 @@ def predictAUTODann(
     str_f1 +=  ("\nAUTODANN:\t")
     str_f1 += (str(list_target_best_fm_autodann))
 
-    str_f1 += "\n----------------------INVERTED-----------------------"
-    str_f1 += "\nSAE:\t"
-    str_f1 += str(list_target_best_fm_cnn_inv)
     
-    str_f1 += ("\nDANN:\t")
-    str_f1 += (str(list_target_best_fm_dann_inv))
-    
-    str_f1 +=  ("\nAUTODANN:\t")
-    str_f1 += (str(list_target_best_fm_autodann_inv))
-
-
     avg_cnn = np.average(list_target_best_fm_cnn)
     avg_dann = np.average(list_target_best_fm_dann)
     avg_autodann = np.average(list_target_best_fm_autodann)
     
-    avg_cnn_inv = np.average(list_target_best_fm_cnn_inv)
-    avg_dann_inv = np.average(list_target_best_fm_dann_inv)
-    avg_autodann_inv = np.average(list_target_best_fm_autodann_inv)
-
-    str_f1 +=  ("\nAVERAGE- SAE - DANN - AUTODANN\n")
+    str_f1 +=  ("\n------------------------------------------------------------\n")
+    str_f1 +=  ('PAGE-LEVEL F1 SAE\tDANN\tAutoDANN\n')
     str_f1 +=  (str(avg_cnn) + "\t")
     str_f1 +=  (str(avg_dann) + "\t")
     str_f1 +=  (str(avg_autodann))
-
-    str_f1 +=  ("\nINVERTED AVERAGE- SAE - DANN - AUTODANN\n")
-    str_f1 +=  (str(avg_cnn_inv) + "\t")
-    str_f1 +=  (str(avg_dann_inv) + "\t")
-    str_f1 +=  (str(avg_autodann_inv))
+    str_f1 = str_f1.replace(".", ",")
 
     print(str_f1)
     pathdir_F1 = "OUTPUT/auto_dann/probs/" + str(config.db1) +"-"+ str(config.db2) + "/" + "f1.txt"

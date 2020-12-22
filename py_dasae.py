@@ -6,7 +6,7 @@ gpu = sys.argv[ sys.argv.index('-gpu') + 1 ] if '-gpu' in sys.argv else '0'
 os.environ['PYTHONHASHSEED'] = '0'
 os.environ['CUDA_VISIBLE_DEVICES']=gpu
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Disable Tensorflow CUDA load statements
-warnings.filterwarnings('ignore')
+#warnings.filterwarnings('ignore')
 
 import copy
 import os
@@ -246,7 +246,6 @@ def train_and_evaluate(datasets, input_shape, config):
             str_results += str(target_best_fm_dann) + "\n"
             str_results += str(target_best_th_dann) + "\n"
 
-            
             utilIO.saveString(str_results, pathdir_results, True)
         else:
             print('SOURCE CNN:')
@@ -273,21 +272,65 @@ def train_and_evaluate(datasets, input_shape, config):
         histogram_source_cnn = utilIO.getHistogramDomain(source_test_folds, model_cnn.label_model, config, 1)
 
         _, target_test_folds = utilIO.load_folds_names(config.db2)
+        histogram_target_cnn = utilIO.getHistogramDomain(target_test_folds, model_cnn.label_model, config, 1)
+
         config.modelpath = "auto_dann_" + weights_filename_cnn + weights_filename_dann
+
+        content_results_file = utilIO.readString(pathdir_results)
+        target_best_fm_cnn = float(content_results_file[2])
+        target_best_th_cnn = float(content_results_file[3])
+        target_best_fm_dann = float(content_results_file[6])
+        target_best_th_dann = float(content_results_file[7])
+        print("Thresholds...SAE\tDANN")
+        print("th: " + str(target_best_th_cnn) + "\t" + str(target_best_th_dann))
+
+        #utilIO.predictModelAtFullPage(
+        #                model_cnn.label_model, 
+        #                config, 
+        #                "sae",
+        #                target_test_folds, 
+        #                source_best_th_cnn, 
+        #                1)
+
+        #utilIO.predictModelAtFullPage(
+        #                model_dann.label_model, 
+        #                config, 
+        #                "dann",
+        #                target_test_folds, 
+        #                source_best_th_dann, 
+        #                1)
+
+        pred_target_auto = utilIO.predictAutoDANN_AtSampleLevel(
+                        model_dann.label_model, 
+                        model_cnn.label_model,
+                        config, 
+                        datasets['target']['x_test'],
+                        source_best_th_cnn, 
+                        source_best_th_dann,
+                        0.25, #threshold_correl_pearson, 
+                        histogram_source_cnn,
+                        1)
+
+        pred_target_auto = pred_target_auto.reshape(datasets['target']['y_test'].shape)
+        
 
         utilIO.predictAUTODann(
                         model_dann.label_model, 
                         model_cnn.label_model, 
                         config, 
                         target_test_folds, 
-                        datasets['target']['y_test'],
                         source_best_th_cnn, 
                         source_best_th_dann, 
                         0.25, #threshold_correl_pearson, 
                         histogram_source_cnn, 
+                        histogram_target_cnn,
                         1)
-
-    
+        
+        source_best_fm_auto, _ = utilMetrics.calculate_best_fm(pred_target_auto, datasets['target']['y_test'] > 0.5, None)
+        
+        print("------------------------------------------------------------")
+        print('SAMPLE-LEVEL F1 SAE\tDANN\tAutoDANN:')
+        print (str(target_best_fm_cnn).replace(".", ",") + "\t" + str(target_best_fm_dann).replace(".", ",") + "\t" + str(source_best_fm_auto).replace(".", ","))
 
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
