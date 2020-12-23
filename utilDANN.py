@@ -11,6 +11,7 @@ from keras.models import load_model
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import util
+import utilIO
 import utilMetrics
 
 
@@ -21,7 +22,12 @@ def get_dann_weights_filename(folder, from_dataset, to_dataset, config):
     else:
         grl_position_str = "_gpos" + str(config.grl_position)
 
-    return '{}{}/weights_dannCONV_model_from_{}_to_{}_w{}_s{}_l{}_f{}_k{}_drop{}_page{}_super{}_e{}_b{}_lda{}_lda_inc{}_dmodel{}{}.npy'.format(
+    if config.filter == False:
+        filter_str = ""
+    else:
+        filter_str = "_filter"
+
+    return '{}{}/weights_dannCONV_model_from_{}_to_{}_w{}_s{}_l{}_f{}_k{}_drop{}_page{}_super{}_e{}_b{}_lda{}_lda_inc{}_dmodel{}{}{}.npy'.format(
                             folder,
                             ('/truncated' if config.truncate else ''),
                             from_dataset, to_dataset,
@@ -33,7 +39,8 @@ def get_dann_weights_filename(folder, from_dataset, to_dataset, config):
                             str(config.epochs), str(config.batch),
                             str(config.lda), str(config.lda_inc),
                             str(config.domain_model_version),
-                            grl_position_str)
+                            grl_position_str,
+                            filter_str)
 
 # ----------------------------------------------------------------------------
 def get_dann_logs_directory(folder, from_dataset, to_dataset, config):
@@ -45,17 +52,66 @@ def get_dann_csv_logs_directory(folder, from_dataset, to_dataset, config):
     weights_filename = get_dann_weights_filename(folder, from_dataset, to_dataset, config)
     return weights_filename.replace("/weights_dann", "/csv_logs_dann")
 
+
+def isSampleSimilarToSource(model_cnn, x_data, num_decimal, threshold_correl_pearson, normalized_list_histogram_source, config):
+
+    roi = x_data.reshape(1, config.window, config.window, 1)
+    prediction = model_cnn.label_model.predict(roi)
+            
+    histogram_pred = utilIO.getHistogramBins(prediction, num_decimal)
+    list_histogram_pred = histogram_pred.values()
+    number_pixels_target = sum(list_histogram_pred)
+    normalized_list_histogram_pred = [number / float(number_pixels_target) for number in list_histogram_pred]
+
+    correl_pearson = np.corrcoef(normalized_list_histogram_pred, normalized_list_histogram_source)[0, 1]
+
+    if correl_pearson > threshold_correl_pearson:
+        return True
+    else:
+        return False
+
 # ----------------------------------------------------------------------------
-def batch_generator(x_data, y_data=None, batch_size=1, shuffle_data=True):
+def batch_generator(
+                config,
+                x_data, y_data=None, 
+                batch_size=1, 
+                with_filter=False, model_cnn=None, 
+                histogram_source=None, 
+                threshold_correl_pearson=None, 
+                shuffle_data=True):
     len_data = len(x_data)
     index_arr = np.arange(len_data)
     if shuffle_data:
         np.random.shuffle(index_arr)
 
+    if with_filter:
+        list_histogram_source = histogram_source.values()
+        number_pixels_source = sum(list_histogram_source)
+        normalized_list_histogram_source = [number / float(number_pixels_source) for number in list_histogram_source]
+    
+        index_to_delete = []
+        num_decimal = 1
+        print("Filtering samples...")
+        for index in index_arr:
+            is_similar_to_source = isSampleSimilarToSource(model_cnn, x_data[index], num_decimal, threshold_correl_pearson, normalized_list_histogram_source, config)
+
+            if is_similar_to_source == True:
+                index_to_delete.append(index)
+
+        print("Original number of samples: " + str(len(index_arr)))
+        print("Number of deleted samples: " + str(len(index_to_delete)))
+        print("Number of used samples: " + str(len(index_arr) - len(index_to_delete)))
+        assert(len(index_arr) - len(index_to_delete) > 0)
+        
+        index_arr = [index for index in index_arr if index not in index_to_delete] 
+        print("Filtering ended...")
+
     start = 0
+    
     while len_data > start + batch_size:
         batch_ids = index_arr[start:start + batch_size]
         start += batch_size
+
         if y_data is not None:
             x_batch = x_data[batch_ids]
             y_batch = y_data[batch_ids]
@@ -66,7 +122,7 @@ def batch_generator(x_data, y_data=None, batch_size=1, shuffle_data=True):
 
 
 # ----------------------------------------------------------------------------
-def train_dann_batch(dann_model, src_generator, target_genenerator, target_x_train, batch_size):
+def train_dann_batch(config, dann_model, src_generator, target_genenerator, target_x_train, batch_size, with_filter, model_cnn, histogram_source, threshold_correl_pearson):
     #### NEW MODEL ####
     #domain0 = np.zeros(target_x_train.shape[1:], dtype=int)
     #domain1 = np.ones(target_x_train.shape[1:], dtype=int)
@@ -84,7 +140,13 @@ def train_dann_batch(dann_model, src_generator, target_genenerator, target_x_tra
         try:
             batchXd = next(target_genenerator)
         except: # Restart...
-            target_genenerator = batch_generator(target_x_train, None, batch_size=batch_size // 2)
+            target_genenerator = batch_generator(
+                                        config,
+                                        target_x_train, None, 
+                                        batch_size=batch_size // 2, 
+                                        with_filter=with_filter, model_cnn=model_cnn, 
+                                        histogram_source=histogram_source, 
+                                        threshold_correl_pearson=threshold_correl_pearson)
             batchXd = next(target_genenerator)
 
         # Combine the labeled and unlabeled data along with the discriminative results
@@ -106,16 +168,27 @@ def train_dann_batch(dann_model, src_generator, target_genenerator, target_x_tra
 
 
 # ----------------------------------------------------------------------------
-def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_test, source_y_test,
-                                                 target_x_train, target_y_train, target_x_test, target_y_test,
+def __train_dann_page(config,
+                                                dann_builder, source_x_train, source_y_train, source_x_test, source_y_test,
+                                                target_x_train, target_y_train, target_x_test, target_y_test,
                                                 nb_epochs, batch_size,
                                                 lda_inc,
-                                                weights_filename,
+                                                weights_filename_dann, model_cnn,
+                                                histogram_source,
+                                                threshold_correl_pearson,
                                                 csv_logs_directory,
                                                 page,
-                                                with_tensorboard, tensorboard):
+                                                with_tensorboard, tensorboard,
+                                                with_filter):
     best_label_f1 = -1
-    target_genenerator = batch_generator(target_x_train, None, batch_size=batch_size // 2)
+    target_genenerator = batch_generator(
+                                config,
+                                target_x_train, None, 
+                                batch_size=batch_size // 2, 
+                                with_filter=with_filter, 
+                                model_cnn=model_cnn,
+                                histogram_source=histogram_source, 
+                                threshold_correl_pearson=threshold_correl_pearson)
 
     def named_logs(source_f1_train, source_f1_test, target_f1_train, target_f1_test, hp_lambda):
         result = {}
@@ -133,7 +206,7 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
     csv_logs_file.close()
 
     for e in range(nb_epochs):
-        src_generator = batch_generator(source_x_train, source_y_train, batch_size=batch_size // 2)
+        src_generator = batch_generator(config, source_x_train, source_y_train, batch_size=batch_size // 2, with_filter=False)
 
         # Update learning rates
         if type(dann_builder.opt) is str:
@@ -145,8 +218,10 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
         dann_builder.grl_layer.increment_hp_lambda_by(lda_inc)
 
         # Train batch
-        logs = train_dann_batch(
-                                            dann_builder.dann_model, src_generator, target_genenerator, target_x_train, batch_size )
+        logs = train_dann_batch(config,
+                                dann_builder.dann_model, src_generator, target_genenerator, target_x_train, batch_size,
+                                with_filter, model_cnn,
+                                histogram_source, threshold_correl_pearson)
 
         loss, domain_loss, label_loss, domain_acc, label_mse = logs
 
@@ -169,7 +244,7 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
         saved = ""
         if source_f1_test >= best_label_f1:
             best_label_f1 = source_f1_test
-            dann_builder.save(weights_filename)
+            dann_builder.save(weights_filename_dann)
             saved = "SAVED"
 
         #target_loss, target_mse = dann_builder.label_model.evaluate(target_x_train, target_y_train, batch_size=32, verbose=0)
@@ -211,7 +286,8 @@ def __train_dann_page(dann_builder, source_x_train, source_y_train, source_x_tes
 
 # ----------------------------------------------------------------------------
 def train_dann(dann_builder, source, target,
-                                    weights_filename, parent_logs_directory, csv_logs_directory,
+                                    weights_filename_dann, model_cnn, histogram_source, threshold_correl_pearson,
+                                    parent_logs_directory, csv_logs_directory,
                                     config):
     print('Training DANN model...')
 
@@ -257,12 +333,16 @@ def train_dann(dann_builder, source, target,
 
             page = source['generator'].get_pos()
 
-            __train_dann_page(dann_builder, source_x_train, source_y_train, source['x_test'], source['y_test'],
+            __train_dann_page(config, dann_builder, source_x_train, source_y_train, source['x_test'], source['y_test'],
                                                     target_x_train, target_y_train, target['x_test'], target['y_test'],
                                                     config.epochs, config.batch,
                                                     config.lda_inc,
-                                                    weights_filename,
+                                                    weights_filename_dann,
+                                                    model_cnn,
+                                                    histogram_source,
+                                                    threshold_correl_pearson,
                                                     csv_logs_directory,
                                                     page,
-                                                    config.tboard, tensorboard)
+                                                    config.tboard, tensorboard,
+                                                    config.filter)
 

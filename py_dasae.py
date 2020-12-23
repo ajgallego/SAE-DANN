@@ -82,6 +82,7 @@ def menu():
     parser.add_argument('--show',   action='store_true', help='Show the result')
     parser.add_argument('--tboard',   action='store_true', help='Active tensorboard')
     parser.add_argument('--save',   action='store_true', help='Save binarized output images')
+    parser.add_argument('--filter',   action='store_true', help='Filter the samples for training')
     parser.add_argument('-loadmodel', type=str,   help='Weights filename to load for test')
 
     parser.add_argument('-d_model',    default=0,    dest='domain_model_version', type=int,   help='Domain model version')
@@ -97,6 +98,18 @@ def menu():
 
     return args
 
+# ----------------------------------------------------------------------------
+def getPathModelsAutoDANN(config):
+    config_cnn = copy.deepcopy(config)
+    config_cnn.type = 'cnn'
+    
+    config_dann = copy.deepcopy(config)
+    config_dann.type = 'dann'
+
+    weights_filename_cnn = utilCNN.get_cnn_weights_filename( utilConst.WEIGHTS_CNN_FOLDERNAME, datasets['source']['name'], config_cnn)
+    weights_filename_dann = utilDANN.get_dann_weights_filename( utilConst.WEIGHTS_DANN_FOLDERNAME, datasets['source']['name'], datasets['target']['name'], config_dann)
+
+    return weights_filename_cnn, weights_filename_dann
 
 # ----------------------------------------------------------------------------
 def load_data(path, db, window, step, page_size, is_test, truncate):
@@ -137,13 +150,23 @@ def train_and_evaluate(datasets, input_shape, config):
 
     if config.type == 'dann':
         dann = model_dann
-        weights_filename = utilDANN.get_dann_weights_filename( utilConst.WEIGHTS_DANN_FOLDERNAME,
-                                                                                                        datasets['source']['name'],
-                                                                                                        datasets['target']['name'], config)
+        
+        weights_filename_cnn, weights_filename_dann = getPathModelsAutoDANN(config)
+
+        if config.filter:
+            model_cnn.label_model.load_weights(weights_filename_cnn)
+
         if config.test == False:
             print('Train SAE DANN...')
+            print ("The model will be saved in: " + str(weights_filename_dann))
+            print ("Computing histogram from source...")
+            _, source_test_folds = utilIO.load_folds_names(config.db1)
+            histogram_source_cnn = utilIO.getHistogramDomain(source_test_folds, model_cnn.label_model, config, 1)
+
             utilDANN.train_dann(dann, datasets['source'], datasets['target'],
-                                                        weights_filename,
+                                                        weights_filename_dann, model_cnn,
+                                                        histogram_source_cnn,
+                                                        0.25, #threshold_correl_pearson,
                                                         utilConst.LOGS_DANN_FOLDERNAME,
                                                         utilConst.CSV_LOGS_DANN_FOLDERNAME,
                                                         config)
@@ -171,14 +194,7 @@ def train_and_evaluate(datasets, input_shape, config):
         assert(config.test == True)
         dann = None
 
-        config_dann = copy.deepcopy(config)
-        config_dann.type = 'dann'
-
-        config_cnn = copy.deepcopy(config)
-        config_cnn.type = 'cnn'
-
-        weights_filename_dann = utilDANN.get_dann_weights_filename( utilConst.WEIGHTS_DANN_FOLDERNAME, datasets['source']['name'], datasets['target']['name'], config_dann)
-        weights_filename_cnn = utilCNN.get_cnn_weights_filename( utilConst.WEIGHTS_CNN_FOLDERNAME, datasets['source']['name'], config_cnn)
+        weights_filename_cnn, weights_filename_dann = getPathModelsAutoDANN(config)
 
         model_dann.load( weights_filename_dann )
         model_cnn.label_model.load_weights(weights_filename_cnn)

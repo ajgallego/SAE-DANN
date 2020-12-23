@@ -229,10 +229,44 @@ def __calculate_img_diff(img_pr, img_y):
     return img_diff
 
 
+def getPrecision(num_decimal):
+    precision = 1.
+    for _ in range(num_decimal):
+        precision /= 10.
+
+    return precision
+
+def getHistogram(image, num_decimal):
+
+    tuple_prediction = tuple(image.reshape(1,-1)[0])
+
+    if num_decimal is not None:
+        tuple_prediction_round = []
+        for num in tuple_prediction:
+            if num > 0.01:
+                tuple_prediction_round.append(round(num, num_decimal))
+            
+        #tuple_prediction_round = [round(num, num_decimal) for num in tuple_prediction]
+        tuple_prediction = tuple_prediction_round
+
+        precision = getPrecision(num_decimal)
+        
+        value = 0.
+        value = round(value, num_decimal)
+        while value <= 1:
+            tuple_prediction.append(value)
+            value += precision
+            value = round(value, num_decimal)
+    
+    histogram_prediction = Counter(tuple_prediction)
+    return histogram_prediction
+
 # ----------------------------------------------------------------------------
 def getHistograms(model, array_files_to_save, config, threshold = 0.5, num_decimal=None):
 
     print('Calculating histogram...')
+
+    list_histograms = []
 
     array_files = load_array_of_files(config.path, array_files_to_save)
 
@@ -290,30 +324,8 @@ def getHistograms(model, array_files_to_save, config, threshold = 0.5, num_decim
         cv2.imwrite(pathdir_outimage + str(filename_out), finalImg_bin*255)
         cv2.imwrite(pathdir_outimage + str(filename), 255-img*255)
         
-
-        tuple_prediction = tuple(finalImg.reshape(1,-1)[0])
-
-        if num_decimal is not None:
-            tuple_prediction_round = []
-            for num in tuple_prediction:
-                if num > 0.01:
-                    tuple_prediction_round.append(round(num, num_decimal))
-                
-            #tuple_prediction_round = [round(num, num_decimal) for num in tuple_prediction]
-            tuple_prediction = tuple_prediction_round
-
-            precision = 1.
-            for i in range(num_decimal):
-                precision /= 10.
-
-            value = 0.
-            value = round(value, num_decimal)
-            while value <= 1:
-                tuple_prediction.append(value)
-                value += precision
-                value = round(value, num_decimal)
-        
-        histogram_prediction = Counter(tuple_prediction)
+        histogram_prediction = getHistogram(finalImg, num_decimal)
+        list_histograms.append(histogram_prediction)
 
         out_histogram_filename = fname.replace(config.path, 'OUTPUT/histogram')
 
@@ -339,9 +351,11 @@ def getHistograms(model, array_files_to_save, config, threshold = 0.5, num_decim
 
         str_histogram = str_prob + "\n" + str_value
 
-        tuple_prediction_round = [str_prob for prob, value in items_histogram]
+        #tuple_prediction_round = [str_prob for prob, value in items_histogram]
 
         saveString(str_histogram, out_histogram_filename, True)
+
+    return list_histograms
         
 
 def getHistogramBins(sample_image, num_decimal):
