@@ -106,13 +106,13 @@ def getPathModelsAutoDANN(config):
     config_dann = copy.deepcopy(config)
     config_dann.type = 'dann'
 
-    weights_filename_cnn = utilCNN.get_cnn_weights_filename( utilConst.WEIGHTS_CNN_FOLDERNAME, datasets['source']['name'], config_cnn)
-    weights_filename_dann = utilDANN.get_dann_weights_filename( utilConst.WEIGHTS_DANN_FOLDERNAME, datasets['source']['name'], datasets['target']['name'], config_dann)
+    weights_filename_cnn = utilCNN.get_cnn_weights_filename( utilConst.WEIGHTS_CNN_FOLDERNAME, config.db1, config_cnn)
+    weights_filename_dann = utilDANN.get_dann_weights_filename( utilConst.WEIGHTS_DANN_FOLDERNAME, config.db1, config.db2, config_dann)
 
     return weights_filename_cnn, weights_filename_dann
 
 # ----------------------------------------------------------------------------
-def load_data(path, db, window, step, page_size, is_test, truncate):
+def load_data(path, db, window, step, page_size, is_test, truncate, with_filter):
     print('Loading data...')
     train_folds, test_folds = utilIO.load_folds_names(db)
 
@@ -123,12 +123,47 @@ def load_data(path, db, window, step, page_size, is_test, truncate):
             train_folds.append( util.rreplace(f, "/", "/aug_", 1) )"""
 
     array_test_files = utilIO.load_array_of_files(path, test_folds, truncate)
-    x_test, y_test = utilDataGenerator.generate_chunks(array_test_files, window, window)
+
+    num_decimal = 1
+
+    histogram_source_cnn = None
+    threshold_correl_pearson = None
+    model_cnn = None
+    
+    input_shape = (config.window, config.window, 1)
+    if config.test == False:
+        if with_filter:
+            summary = config.type == 'dann'
+            model_cnn = utilDANNModel.DANNModel(input_shape, config, summary)
+            weights_filename_cnn, weights_filename_dann = getPathModelsAutoDANN(config)
+            model_cnn.label_model.load_weights(weights_filename_cnn)
+
+            _, source_test_folds = utilIO.load_folds_names(config.db1)
+            histogram_source_cnn = utilIO.getHistogramDomain(source_test_folds, model_cnn.label_model, config, num_decimal)
+            threshold_correl_pearson = 0.25
+
+        
+    x_test, y_test = utilDataGenerator.generate_chunks(
+                                array_test_files, 
+                                window, 
+                                window,
+                                False, #with_filter, 
+                                histogram_source_cnn, 
+                                model_cnn,
+                                threshold_correl_pearson,
+                                num_decimal,
+                                config)
 
     train_data_generator = None
     if is_test == False:
         array_train_files = utilIO.load_array_of_files(path, train_folds, truncate)
-        train_data_generator = utilDataGenerator.LazyChunkGenerator(array_train_files, page_size, window, step)
+        train_data_generator = utilDataGenerator.LazyChunkGenerator(array_train_files, page_size, window, step, 
+                                with_filter, 
+                                histogram_source_cnn, 
+                                model_cnn,
+                                threshold_correl_pearson,
+                                num_decimal,
+                                config)
         train_data_generator.shuffle()
 
     print('DB: ', db)
@@ -172,8 +207,8 @@ def train_and_evaluate(datasets, input_shape, config):
                                                         config)
         else:
             #weights_filename = weights_filename.replace("_dmodel2", "")
-            print(weights_filename)
-            dann.load( weights_filename )  # Load the last save weights...
+            print(weights_filename_dann)
+            dann.load( weights_filename_dann )  # Load the last save weights...
 
     elif config.type == 'cnn':
         dann = model_cnn
@@ -216,13 +251,13 @@ def train_and_evaluate(datasets, input_shape, config):
         print('TARGET:')
         target_best_fm, target_best_th = utilMetrics.calculate_best_fm(pred_target, datasets['target']['y_test'], source_best_th)
 
-        config.modelpath = weights_filename
+        config.modelpath = weights_filename_dann
         _, target_test_folds = utilIO.load_folds_names(config.db2)
         utilIO.getHistograms(dann.label_model, target_test_folds, config, source_best_th, 1)
 
         # Save output images
         if config.save:
-            config.modelpath = weights_filename
+            config.modelpath = weights_filename_dann
             config.threshold = target_best_th
             _, target_test_folds = utilIO.load_folds_names(config.db2)
             utilIO.save_images(dann.label_model, target_test_folds, config)
@@ -290,7 +325,7 @@ def train_and_evaluate(datasets, input_shape, config):
         _, target_test_folds = utilIO.load_folds_names(config.db2)
         histogram_target_cnn = utilIO.getHistogramDomain(target_test_folds, model_cnn.label_model, config, 1)
 
-        config.modelpath = "auto_dann_" + weights_filename_cnn + weights_filename_dann
+        config.modelpath = weights_filename_dann.replace("weights_dannCONV_", "auto_dann_")
 
         content_results_file = utilIO.readString(pathdir_results)
         target_best_fm_cnn = float(content_results_file[2])
@@ -316,11 +351,12 @@ def train_and_evaluate(datasets, input_shape, config):
         #                source_best_th_dann, 
         #                1)
 
-        pred_target_auto = utilIO.predictAutoDANN_AtSampleLevel(
+        pred_target_auto, pred_target_auto_ideal = utilIO.predictAutoDANN_AtSampleLevel(
                         model_dann.label_model, 
                         model_cnn.label_model,
                         config, 
                         datasets['target']['x_test'],
+                        datasets['target']['y_test'],
                         source_best_th_cnn, 
                         source_best_th_dann,
                         0.25, #threshold_correl_pearson, 
@@ -328,7 +364,7 @@ def train_and_evaluate(datasets, input_shape, config):
                         1)
 
         pred_target_auto = pred_target_auto.reshape(datasets['target']['y_test'].shape)
-        
+        pred_target_auto_ideal = pred_target_auto_ideal.reshape(datasets['target']['y_test'].shape)
 
         utilIO.predictAUTODann(
                         model_dann.label_model, 
@@ -342,11 +378,15 @@ def train_and_evaluate(datasets, input_shape, config):
                         histogram_target_cnn,
                         1)
         
-        source_best_fm_auto, _ = utilMetrics.calculate_best_fm(pred_target_auto, datasets['target']['y_test'] > 0.5, None)
+        target_best_fm_auto, _ = utilMetrics.calculate_best_fm(pred_target_auto, datasets['target']['y_test'] > 0.5, None)
+        target_best_fm_auto_ideal, _ = utilMetrics.calculate_best_fm(pred_target_auto_ideal, datasets['target']['y_test'] > 0.5, None)
         
         print("------------------------------------------------------------")
-        print('SAMPLE-LEVEL F1 SAE\tDANN\tAutoDANN:')
-        print (str(target_best_fm_cnn).replace(".", ",") + "\t" + str(target_best_fm_dann).replace(".", ",") + "\t" + str(source_best_fm_auto).replace(".", ","))
+        print('SAMPLE-LEVEL F1 SAE\tDANN\tAutoDANN\tIDEAL:')
+        print (str(target_best_fm_cnn).replace(".", ",") + "\t" 
+                        + str(target_best_fm_dann).replace(".", ",") + "\t" 
+                        + str(target_best_fm_auto).replace(".", ",") + "\t"
+                        + str(target_best_fm_auto_ideal).replace(".", ","))
 
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
@@ -355,9 +395,9 @@ if __name__ == "__main__":
     config = menu()
 
     source_data = load_data(config.path, config.db1, config.window, config.step,
-                                                        config.page, config.test, config.truncate)
+                                                        config.page, config.test, config.truncate, False)
     target_data = load_data(config.path, config.db2, config.window, config.step,
-                                                        config.page, config.test, config.truncate)
+                                                        config.page, config.test, config.truncate, config.filter)
     datasets = {'source': source_data, 'target': target_data}
 
     print('SOURCE: {} \ttrain_generator:{}\tx_test:{}\ty_test:{}'.format(

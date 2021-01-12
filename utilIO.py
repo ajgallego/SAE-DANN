@@ -337,7 +337,7 @@ def getHistograms(model, array_files_to_save, config, threshold = 0.5, num_decim
 
         out_histogram_filename = out_histogram_filename.replace('.h5', '/OUT_PR').replace('.npy', '/OUT_PR')
 
-        out_histogram_filename = out_histogram_filename.replace(".png", ".txt")
+        out_histogram_filename = str(out_histogram_filename.replace(".png", ".txt"))
         print(' - Saving predicted image to:', out_histogram_filename)
         util.mkdirp( os.path.dirname(out_histogram_filename) )
 
@@ -620,19 +620,30 @@ def predictAutoDANN_AtSampleLevel(
                         model_cnn,
                         config, 
                         x_test_samples,
+                        y_test_samples,
                         source_best_th_cnn, 
                         source_best_th_dann,
                         threshold_correl_pearson,
                         histogram_source_cnn,
                         num_decimal):
     predicts_auto = []
+    predicts_auto_ideal = []
 
     #Histogram for source
     list_histogram_source_cnn = histogram_source_cnn.values()
     number_pixels_source = sum(list_histogram_source_cnn)
     normalized_list_histogram_source_cnn = [number / float(number_pixels_source) for number in list_histogram_source_cnn]
     
-    for x_test_sample in x_test_samples:
+    count_cnn = 0
+    count_dann = 0
+
+    count_cnn_ideal = 0
+    count_dann_ideal = 0
+
+    idx_sample = 0
+    for idx_sample in range(len(x_test_samples)):
+        x_test_sample = x_test_samples[idx_sample]
+        y_test_sample = y_test_samples[idx_sample]
         
         list_x_test_sample = list()
         list_x_test_sample.append(x_test_sample)
@@ -657,15 +668,60 @@ def predictAutoDANN_AtSampleLevel(
             #SAE
             threshold = source_best_th_cnn
             sample_prediction = sample_prediction_cnn
+            count_cnn += 1
 
         else:
             #DANN
             threshold = source_best_th_dann
             sample_prediction = sample_prediction_dann
+            count_dann += 1
 
         predicts_auto.append(sample_prediction > threshold)
 
-    return np.asarray(predicts_auto)
+
+        sample_prediction_cnn_th = sample_prediction_cnn > source_best_th_cnn
+        sample_prediction_dann_th = sample_prediction_dann > source_best_th_dann
+
+        y_test_sample = y_test_sample[:,:,0].reshape(config.window, config.window)
+        
+        #cv2.imwrite("prueba/cnn.png", sample_prediction_cnn_th*255)
+        #cv2.imwrite("prueba/dann.png", sample_prediction_dann_th*255)
+        #cv2.imwrite("prueba/gt.png", (y_test_sample>0.5)*255)
+        
+        #print (sample_prediction_cnn_th.shape)
+        #print(sample_prediction_dann_th.shape)
+        #print(y_test_sample.shape)
+         
+
+        target_best_fm_cnn, _ = utilMetrics.calculate_best_fm(sample_prediction_cnn_th, y_test_sample > 0.5, None, False)
+        target_best_fm_dann, _ = utilMetrics.calculate_best_fm(sample_prediction_dann_th, y_test_sample > 0.5, None, False)
+
+        if target_best_fm_cnn > target_best_fm_dann:
+            best_sample_prediction_th = sample_prediction_cnn_th
+            count_cnn_ideal += 1
+        else:
+            best_sample_prediction_th = sample_prediction_dann_th
+            count_dann_ideal += 1
+
+        #print("SAE: " + str(target_best_fm_cnn))
+        #print("DANN: " + str(target_best_fm_dann))
+
+        predicts_auto_ideal.append(best_sample_prediction_th)
+
+    print (config.db1 + "->" + config.db2 )
+    print ("Filters in target:")
+    print("SAE: " + str(count_cnn))
+    print("DANN: " + str(count_dann))
+    print("Total samples: " + str(count_cnn + count_dann))
+    print ("Ideal filters:")
+    print("SAE: " + str(count_cnn_ideal))
+    print("DANN: " + str(count_dann_ideal))
+    print("Total samples: " + str(count_cnn_ideal + count_dann_ideal))
+
+    predicts_auto = np.asarray(predicts_auto)
+    predicts_auto_ideal = np.asarray(predicts_auto_ideal)
+    assert(len(predicts_auto)==len(predicts_auto_ideal))
+    return predicts_auto, predicts_auto_ideal
         
 def predictAUTODann(
                 model_dann, 
@@ -701,6 +757,12 @@ def predictAUTODann(
     list_target_best_fm_autodann = []
     list_target_best_fm_cnn = []
     list_target_best_fm_dann = []
+    list_target_best_fm_ideal = []
+
+    count_cnn = 0
+    count_dann = 0
+    count_cnn_ideal = 0
+    count_dann_ideal = 0
 
     for fname in array_files:
         print('Processing image', fname)
@@ -720,12 +782,14 @@ def predictAUTODann(
         finalImg = np.zeros(img.shape, dtype=float)
         finalImg_bin = np.zeros(img.shape, dtype=float)
         finalImg_sel = np.zeros(img.shape, dtype=float)
+        finalImg_ideal = np.zeros(img.shape, dtype=float)
 
         finalImg_cnn = np.zeros(img.shape, dtype=float)
         finalImg_dann = np.zeros(img.shape, dtype=float)
         
         finalImg_bin_cnn = np.zeros(img.shape, dtype=float)
         finalImg_bin_dann = np.zeros(img.shape, dtype=float)
+        finalImg_bin_ideal = np.zeros(img.shape, dtype=float)
         
         for (x, y, window) in utilDataGenerator.sliding_window(img, stepSize=config.window-5, windowSize=(config.window, config.window)):
             if window.shape[0] != config.window or window.shape[1] != config.window:
@@ -762,13 +826,14 @@ def predictAUTODann(
                 #SAE
                 threshold = threshold_cnn
                 sample_prediction = sample_prediction_cnn
+                count_cnn += 1
 
             else:
                 #DANN
                 threshold = threshold_dann
                 sample_prediction = sample_prediction_dann
                 finalImg_sel[y+2:(y + config.window-2), x+2:(x + config.window-2)] = (sample_prediction >= 0.0)
-            
+                count_dann += 1
             
             finalImg[y+2:(y + config.window-2), x+2:(x + config.window-2)] = sample_prediction
             finalImg_bin[y+2:(y + config.window-2), x+2:(x + config.window-2)] = (sample_prediction < threshold)
@@ -780,6 +845,26 @@ def predictAUTODann(
             finalImg_bin_dann[y+2:(y + config.window-2), x+2:(x + config.window-2)] = (sample_prediction_dann < threshold_dann)
             
            
+            gt_sample = gt[y+2:(y + config.window-2), x+2:(x + config.window-2)]
+            sample_prediction_cnn_th = sample_prediction_cnn < threshold_cnn
+            sample_prediction_dann_th = sample_prediction_dann < threshold_dann
+
+            target_best_fm_cnn, _ = utilMetrics.calculate_best_fm(sample_prediction_cnn_th, gt_sample > 0.5, None, False)
+            target_best_fm_dann, _ = utilMetrics.calculate_best_fm(sample_prediction_dann_th, gt_sample > 0.5, None, False)
+
+            if target_best_fm_cnn > target_best_fm_dann:
+                best_sample_prediction_th = sample_prediction_cnn_th
+                best_sample_prediction = sample_prediction_cnn
+                count_cnn_ideal += 1
+                best_threshold_auto_ideal = threshold_cnn
+            else:
+                best_sample_prediction_th = sample_prediction_dann_th
+                best_sample_prediction = sample_prediction_dann
+                count_dann_ideal += 1
+                best_threshold_auto_ideal = threshold_dann
+
+            finalImg_bin_ideal[y+2:(y + config.window-2), x+2:(x + config.window-2)] = (best_sample_prediction_th)
+
             #cv2.imshow("finalImg", (1 - finalImg.astype('uint8')) * 255 )
             #cv2.waitKey(0)
         
@@ -805,6 +890,7 @@ def predictAUTODann(
 
         out_histogram_filename = fname.replace(config.path, 'OUTPUT/auto_dann/histogram')
 
+        out_histogram_filename = str(out_histogram_filename)
         out_histogram_filename = out_histogram_filename.replace(utilConst.X_SUFIX+'/', '/'+config.modelpath + '/')
         out_histogram_filename = out_histogram_filename.replace(utilConst.WEIGHTS_DANN_FOLDERNAME+'/', '')
         out_histogram_filename = out_histogram_filename.replace(utilConst.WEIGHTS_CNN_FOLDERNAME+'/', '')
@@ -832,6 +918,7 @@ def predictAUTODann(
         finalImg_bin = (finalImg_bin<0.5)
         finalImg_bin_cnn = (finalImg_bin_cnn<0.5)
         finalImg_bin_dann = (finalImg_bin_dann<0.5)
+        finalImg_bin_ideal = (finalImg_bin_ideal<0.5)
         gt = (gt < 0.5)
 
         print ("F1 at sample-level:")
@@ -841,10 +928,13 @@ def predictAUTODann(
         target_best_fm_cnn, _ = utilMetrics.calculate_best_fm(finalImg_bin_cnn, gt, None)
         print ("DANN:")
         target_best_fm_dann, _ = utilMetrics.calculate_best_fm(finalImg_bin_dann, gt, None)
+        print ("IDEAL:")
+        target_best_fm_ideal, _ = utilMetrics.calculate_best_fm(finalImg_bin_ideal, gt, None)
 
         list_target_best_fm_autodann.append(target_best_fm_autodann)
         list_target_best_fm_cnn.append(target_best_fm_cnn)
         list_target_best_fm_dann.append(target_best_fm_dann)
+        list_target_best_fm_ideal.append(target_best_fm_ideal)
 
     print ("F1 at page-level")
     
@@ -857,22 +947,37 @@ def predictAUTODann(
     str_f1 +=  ("\nAUTODANN:\t")
     str_f1 += (str(list_target_best_fm_autodann))
 
+    str_f1 +=  ("\IDEAL:\t")
+    str_f1 += (str(list_target_best_fm_ideal))
     
     avg_cnn = np.average(list_target_best_fm_cnn)
     avg_dann = np.average(list_target_best_fm_dann)
     avg_autodann = np.average(list_target_best_fm_autodann)
+    avg_autodann_ideal = np.average(list_target_best_fm_ideal)
     
     str_f1 +=  ("\n------------------------------------------------------------\n")
-    str_f1 +=  ('PAGE-LEVEL F1 SAE\tDANN\tAutoDANN\n')
+    str_f1 +=  ('PAGE-LEVEL F1 SAE\tDANN\tAutoDANN\tIDEAL\n')
     str_f1 +=  (str(avg_cnn) + "\t")
     str_f1 +=  (str(avg_dann) + "\t")
-    str_f1 +=  (str(avg_autodann))
+    str_f1 +=  (str(avg_autodann) + "\t")
+    str_f1 +=  (str(avg_autodann_ideal))
+    
     str_f1 = str_f1.replace(".", ",")
 
     print(str_f1)
     pathdir_F1 = "OUTPUT/auto_dann/probs/" + str(config.db1) +"-"+ str(config.db2) + "/" + "f1.txt"
     saveString(str_f1, pathdir_F1, True)
     
+    print (config.db1 + "->" + config.db2 )
+    print ("Filters in target:")
+    print("SAE: " + str(count_cnn))
+    print("DANN: " + str(count_dann))
+    print("Total samples: " + str(count_cnn + count_dann))
+    print ("Ideal filters:")
+    print("SAE: " + str(count_cnn_ideal))
+    print("DANN: " + str(count_dann_ideal))
+    print("Total samples: " + str(count_cnn_ideal + count_dann_ideal))
+
     return avg_cnn, avg_dann, avg_autodann
 
 

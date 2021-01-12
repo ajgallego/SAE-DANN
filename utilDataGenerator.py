@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 import gc
 import utilConst
+import utilIO
 
 
 SHOW_IMAGES = False
@@ -87,10 +88,48 @@ def normalize_data( x_data, norm_type ):
 
 
 # ----------------------------------------------------------------------------
-def generate_chunks(array_x_files, window_size, step_size):
+def isSampleSimilarToSource(model_cnn, x_data, num_decimal, threshold_correl_pearson, normalized_list_histogram_source, config):
+
+    roi = x_data.reshape(1, config.window, config.window, 1)
+
+    norm_type = '255'
+    roi = normalize_data( roi, norm_type )
+
+    prediction = model_cnn.label_model.predict(roi)
+            
+    histogram_pred = utilIO.getHistogramBins(prediction, num_decimal)
+    list_histogram_pred = histogram_pred.values()
+    number_pixels_target = sum(list_histogram_pred)
+    normalized_list_histogram_pred = [number / float(number_pixels_target) for number in list_histogram_pred]
+
+    correl_pearson = np.corrcoef(normalized_list_histogram_pred, normalized_list_histogram_source)[0, 1]
+
+    if correl_pearson > threshold_correl_pearson:
+        return True
+    else:
+        return False
+
+# ----------------------------------------------------------------------------
+def generate_chunks(
+                array_x_files, 
+                window_size, 
+                step_size, 
+                with_filter, 
+                histogram_source, 
+                model_cnn,
+                threshold_correl_pearson,
+                num_decimal,
+                config):
     x_data = []
     y_data = []
 
+    if with_filter:
+        list_histogram_source = histogram_source.values()
+        number_pixels_source = sum(list_histogram_source)
+        normalized_list_histogram_source = [number / float(number_pixels_source) for number in list_histogram_source]
+
+    total_samples = 0
+    total_samples_used = 0
     for fname_x in array_x_files:
         fname_y = fname_x.replace(utilConst.X_SUFIX, utilConst.Y_SUFIX)
         img_x = cv2.imread(fname_x, cv2.IMREAD_GRAYSCALE)
@@ -116,26 +155,74 @@ def generate_chunks(array_x_files, window_size, step_size):
             cv2.imshow("Img_y", img_y)
             cv2.waitKey(0)
 
+        coords_x_included = []
+        coords_y_included = []
+        
+        total_samples_img = 0
+        total_samples_used_img = 0
         for (x, y, window) in sliding_window(img_x, stepSize=step_size, windowSize=(window_size, window_size)):
             if window.shape[0] != window_size or window.shape[1] != window_size:  # if the window does not meet our desired window size, ignore it
                 continue
-            x_data.append( window.copy() )
+            
+            total_samples_img += 1
+            if with_filter:
+                is_similar_to_source = isSampleSimilarToSource(model_cnn, window, num_decimal, threshold_correl_pearson, normalized_list_histogram_source, config)
+                if is_similar_to_source == False:
+                    x_data.append( window.copy() )
+                    coords_x_included.append(x)
+                    coords_y_included.append(y)
+                    total_samples_used_img += 1
+            else:
+                x_data.append( window.copy() )
+                total_samples_used_img += 1
+                coords_x_included.append(x)
+                coords_y_included.append(y)
 
             if SHOW_IMAGES:
                 cv2.imshow("window_x", window)
                 cv2.waitKey(0)
                 print(x,y)
 
-        for (x, y, window) in sliding_window(img_y, stepSize=step_size, windowSize=(window_size, window_size)):
-            if window.shape[0] != window_size or window.shape[1] != window_size:  # if the window does not meet our desired window size, ignore it
-                continue
-            y_data.append( window.copy() )
+        total_samples += total_samples_img
+        total_samples_used += total_samples_used_img
+        print("Sample extraction in " + str(fname_x))
+        print (str(total_samples_used_img) + "/" + str(total_samples_img) + " samples")
 
-            if SHOW_IMAGES:
-                cv2.imshow("window_y", window)
-                cv2.waitKey(0)
-                print(x,y)
+        sample_included_found = False
+        try:
+            last_x_coord = coords_x_included.pop(0)
+            last_y_coord = coords_y_included.pop(0)
+            for (x, y, window) in sliding_window(img_y, stepSize=step_size, windowSize=(window_size, window_size)):
+                if with_filter and sample_included_found == True:
+                    if len(coords_x_included) == 0:
+                        break
+                    last_x_coord = coords_x_included.pop(0)
+                    last_y_coord = coords_y_included.pop(0)
+                    sample_included_found = False
 
+                if window.shape[0] != window_size or window.shape[1] != window_size:  # if the window does not meet our desired window size, ignore it
+                    continue
+
+                if with_filter:
+                    if (last_x_coord == x) and (last_y_coord == y):
+                        y_data.append( window.copy() )
+                        sample_included_found=True
+                else:
+                    y_data.append( window.copy() )
+
+                if SHOW_IMAGES:
+                    cv2.imshow("window_y", window)
+                    cv2.waitKey(0)
+                    print(x,y)
+
+        except:
+            pass
+
+    assert(len(x_data) == len(y_data))
+
+    print ("--------------------------------Summary of sample extraction----------------------------------")
+    print (str(total_samples_used) + "/" + str(total_samples) + " samples")
+    print ("With filter: " + str(with_filter))
 
     norm_type = '255'
     x_data = normalize_data( x_data, norm_type )
@@ -210,10 +297,23 @@ class LazyFileLoader:
 
 # ----------------------------------------------------------------------------
 class LazyChunkGenerator(LazyFileLoader):
-   def __init__(self, array_x_files, nb_pages, window_size, step_size):
-      LazyFileLoader.__init__(self, array_x_files, nb_pages)
-      self.window_size = window_size
-      self.step_size = step_size
+   def __init__(
+                self, array_x_files, nb_pages, window_size, step_size, 
+                with_filter, 
+                histogram_source, 
+                model_cnn,
+                threshold_correl_pearson,
+                num_decimal,
+                config):
+        LazyFileLoader.__init__(self, array_x_files, nb_pages)
+        self.window_size = window_size
+        self.step_size = step_size
+        self.with_filter = with_filter 
+        self.histogram_source = histogram_source
+        self.model_cnn = model_cnn
+        self.threshold_correl_pearson = threshold_correl_pearson
+        self.num_decimal = num_decimal
+        self.config = config
 
    def next(self):
        psize = self.page_size
@@ -226,7 +326,13 @@ class LazyChunkGenerator(LazyFileLoader):
        print('> Loading page from', self.pos, 'to', self.pos + psize, '...')
        gc.collect()
        X_data, Y_data = generate_chunks(self.array_x_files[self.pos:self.pos + psize],
-                                                                               self.window_size, self.step_size)
+                                        self.window_size, self.step_size,
+                                        self.with_filter, 
+                                        self.histogram_source, 
+                                        self.model_cnn,
+                                        self.threshold_correl_pearson,
+                                        self.num_decimal,
+                                        self.config)
        self.pos += self.page_size
 
        return X_data, Y_data

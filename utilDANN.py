@@ -53,58 +53,15 @@ def get_dann_csv_logs_directory(folder, from_dataset, to_dataset, config):
     return weights_filename.replace("/weights_dann", "/csv_logs_dann")
 
 
-def isSampleSimilarToSource(model_cnn, x_data, num_decimal, threshold_correl_pearson, normalized_list_histogram_source, config):
-
-    roi = x_data.reshape(1, config.window, config.window, 1)
-    prediction = model_cnn.label_model.predict(roi)
-            
-    histogram_pred = utilIO.getHistogramBins(prediction, num_decimal)
-    list_histogram_pred = histogram_pred.values()
-    number_pixels_target = sum(list_histogram_pred)
-    normalized_list_histogram_pred = [number / float(number_pixels_target) for number in list_histogram_pred]
-
-    correl_pearson = np.corrcoef(normalized_list_histogram_pred, normalized_list_histogram_source)[0, 1]
-
-    if correl_pearson > threshold_correl_pearson:
-        return True
-    else:
-        return False
-
 # ----------------------------------------------------------------------------
 def batch_generator(
-                config,
                 x_data, y_data=None, 
-                batch_size=1, 
-                with_filter=False, model_cnn=None, 
-                histogram_source=None, 
-                threshold_correl_pearson=None, 
+                batch_size=1,  
                 shuffle_data=True):
     len_data = len(x_data)
     index_arr = np.arange(len_data)
     if shuffle_data:
         np.random.shuffle(index_arr)
-
-    if with_filter:
-        list_histogram_source = histogram_source.values()
-        number_pixels_source = sum(list_histogram_source)
-        normalized_list_histogram_source = [number / float(number_pixels_source) for number in list_histogram_source]
-    
-        index_to_delete = []
-        num_decimal = 1
-        print("Filtering samples...")
-        for index in index_arr:
-            is_similar_to_source = isSampleSimilarToSource(model_cnn, x_data[index], num_decimal, threshold_correl_pearson, normalized_list_histogram_source, config)
-
-            if is_similar_to_source == True:
-                index_to_delete.append(index)
-
-        print("Original number of samples: " + str(len(index_arr)))
-        print("Number of deleted samples: " + str(len(index_to_delete)))
-        print("Number of used samples: " + str(len(index_arr) - len(index_to_delete)))
-        assert(len(index_arr) - len(index_to_delete) > 0)
-        
-        index_arr = [index for index in index_arr if index not in index_to_delete] 
-        print("Filtering ended...")
 
     start = 0
     
@@ -141,12 +98,8 @@ def train_dann_batch(config, dann_model, src_generator, target_genenerator, targ
             batchXd = next(target_genenerator)
         except: # Restart...
             target_genenerator = batch_generator(
-                                        config,
                                         target_x_train, None, 
-                                        batch_size=batch_size // 2, 
-                                        with_filter=with_filter, model_cnn=model_cnn, 
-                                        histogram_source=histogram_source, 
-                                        threshold_correl_pearson=threshold_correl_pearson)
+                                        batch_size=batch_size // 2)
             batchXd = next(target_genenerator)
 
         # Combine the labeled and unlabeled data along with the discriminative results
@@ -182,13 +135,8 @@ def __train_dann_page(config,
                                                 with_filter):
     best_label_f1 = -1
     target_genenerator = batch_generator(
-                                config,
                                 target_x_train, None, 
-                                batch_size=batch_size // 2, 
-                                with_filter=with_filter, 
-                                model_cnn=model_cnn,
-                                histogram_source=histogram_source, 
-                                threshold_correl_pearson=threshold_correl_pearson)
+                                batch_size=batch_size // 2)
 
     def named_logs(source_f1_train, source_f1_test, target_f1_train, target_f1_test, hp_lambda):
         result = {}
@@ -206,7 +154,7 @@ def __train_dann_page(config,
     csv_logs_file.close()
 
     for e in range(nb_epochs):
-        src_generator = batch_generator(config, source_x_train, source_y_train, batch_size=batch_size // 2, with_filter=False)
+        src_generator = batch_generator(source_x_train, source_y_train, batch_size=batch_size // 2)
 
         # Update learning rates
         if type(dann_builder.opt) is str:
