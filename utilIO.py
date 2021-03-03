@@ -9,6 +9,8 @@ import utilDataGenerator
 import utilMetrics
 from collections import Counter
 
+import math
+
 
 # -----------------------------------------------------------------------------
 def load_array_of_files(basepath, folders, truncate=False):
@@ -614,6 +616,42 @@ def predictModelAtFullPage(
     
     return avg_cnn
 
+
+def histogram_intersection(h1, h2):
+    assert(len(h1) == len(h2))
+    sm = 0
+    for i in range(len(h1)):
+        sm += min(h1[i], h2[i])
+    return sm
+
+
+
+def log2(x):
+    return math.log(x)/math.log(2)
+
+# calculate the kl divergence (measured in bits)
+def kl_divergence_bits(p, q):
+    cte = 0.0000001
+    p2 = [p[i] + cte for i in range(len(p))]
+    q2 = [q[i] + cte for i in range(len(q))]
+    return sum([p2[i] * log2(p2[i]/q2[i]) for i in range(len(p2))])
+
+# calculate the kl divergence (measured in nats)
+def kl_divergence_nats(p, q):
+    cte = 0.0000001
+    p2 = [p[i] + cte for i in range(len(p))]
+    q2 = [q[i] + cte for i in range(len(q))]
+    return sum([p2[i] * log2(p2[i]/q2[i]) for i in range(len(p2))])
+
+# calculate the js divergence (measure in bits)
+def js_divergence_bits(p, q):
+    m = 0.5 * (p + q)
+    return 0.5 * kl_divergence_bits(p, m) + 0.5 * kl_divergence_bits(q, m)
+
+# calculate the js divergence (measured in nats)
+def js_divergence_nats(p, q):
+    m = 0.5 * (p + q)
+    return 0.5 * kl_divergence_nats(p, m) + 0.5 * kl_divergence_nats(q, m)
 
 def predictAutoDANN_AtSampleLevel(
                         model_dann, 
