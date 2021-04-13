@@ -1,0 +1,172 @@
+
+#!/usr/bin/gnuplot
+#
+# Demonstration of a common use scenario of the multiplot environment.
+#
+# AUTHOR: Hagen Wierstorf
+#
+
+reset
+set encoding utf8 # mandatory
+
+# wxt terminal
+#set terminal wxt size 850,850 enhanced font 'Verdana,10' persist
+# png
+set terminal pngcairo size 400,500 enhanced font 'Verdana,10'
+set output 'correl_pre.png'
+
+
+# color definitions
+set style line  1 lc rgb '#0060ad' pt 5 ps 0.2 lt 1 lw 2    # blue
+
+unset key
+
+# Enable the use of macros
+set macros
+
+set tics scale 0.5
+set ytics 1
+set xrange [0.5:6.5]
+set yrange [-0.25:1.25]
+
+set grid
+
+
+
+
+
+
+LCases="abcdefghijklmnopqrstuvwxyz"
+SCases="ᴀʙᴄᴅᴇғɢʜɪᴊᴋʟᴍɴᴏᴘǫʀsᴛᴜᴠᴡxʏᴢ"
+
+toscchr(c)= c eq ""  ?  ""  :  substr( SCases.c, strstrt(LCases.c, c), strstrt(LCases.c, c) )
+
+texsc(s) = strlen(s) <= 1 ? toscchr(s) : texsc(s[1:strlen(s)/2]).texsc(s[(strlen(s)/2)+1:strlen(s)])
+
+sal_ein_label=texsc("Salzinnes")."{/Symbol \256}".texsc("Einsiedeln")
+sal_dib_label=texsc("Salzinnes")."{/Symbol \256}".texsc("Dibco")
+sal_phi_label=texsc("Salzinnes")."{/Symbol \256}".texsc("Phi")
+sal_palm_label=texsc("Salzinnes")."{/Symbol \256}".texsc("Palm")
+
+ein_sal_label=texsc("Einsiedeln")."{/Symbol \256}".texsc("Salzinnes")
+ein_dib_label=texsc("Einsiedeln")."{/Symbol \256}".texsc("Dibco")
+ein_phi_label=texsc("Einsiedeln")."{/Symbol \256}".texsc("Phi")
+ein_palm_label=texsc("Einsiedeln")."{/Symbol \256}".texsc("Palm")
+
+dib_sal_label=texsc("Dibco")."{/Symbol \256}".texsc("Salzinnes")
+dib_ein_label=texsc("Dibco")."{/Symbol \256}".texsc("Einsiedeln")
+dib_phi_label=texsc("Dibco")."{/Symbol \256}".texsc("Phi")
+dib_palm_label=texsc("Dibco")."{/Symbol \256}".texsc("Palm")
+
+phi_sal_label=texsc("Phi")."{/Symbol \256}".texsc("Salzinnes")
+phi_ein_label=texsc("Phi")."{/Symbol \256}".texsc("Einsiedeln")
+phi_dib_label=texsc("Phi")."{/Symbol \256}".texsc("Dibco")
+phi_palm_label=texsc("Phi")."{/Symbol \256}".texsc("Palm")
+
+palm_sal_label=texsc("Palm")."{/Symbol \256}".texsc("Salzinnes")
+palm_ein_label=texsc("Palm")."{/Symbol \256}".texsc("Einsiedeln")
+palm_dib_label=texsc("Palm")."{/Symbol \256}".texsc("Dibco")
+palm_phi_label=texsc("Palm")."{/Symbol \256}".texsc("Phi")
+
+
+
+set xtics ('' 1, '' 2,'' 3, '' 4, '' 5, '' 6, '' 7, '' 8, '' 9, '' 10, '' 11, '' 12, '' 13, '' 14, '' 15, '' 16, '' 17, '' 18, '' 19, '' 20); \
+unset xlabel
+
+# MACROS
+# x- and ytics for each row resp. column
+NOXTICS = "set xtics ('' 1, '' 2,'' 3, '' 4, '' 5, '' 6, '' 7, '' 8, '' 9, '' 10, '' 11, '' 12, '' 13, '' 14, '' 15, '' 16, '' 17, '' 18, '' 19, '' 20); \
+          unset xlabel"
+XTICS = "set xtics ('1' 1, '2' 2,'3' 3, '4' 4, '5' 5, '6' 6, '7' 7, '8' 8, '9' 9, '10' 10, '11' 11, '12' 12, '13' 13, '14' 14, '15' 15, '16' 16, '17' 17, '18' 18, '19' 19, '20' 20);\
+          set xlabel 'x'"
+NOYTICS = "set format y ''; unset ylabel"
+YTICS = "set format y '%.0f'; set ylabel 'y'"
+# Margins for each row resp. column
+
+
+# Placement of the a,b,c,d labels in the graphs
+POS = "at graph 0.96,0.8 font ',12' right"
+
+### Start multiplot (4x1 layout)
+#set multiplot layout 4,1
+
+
+set style line 1 lt 5 lc rgb "#FF9369" lw 2 dt 1 pt 6 ps .85
+set style line 2 lt 5 lc rgb "#FFAD29" lw 2 dt 5 pt 5 ps .85
+set style line 3 lt 5 lc rgb "#E31029" lw 2 dt 4 pt 9 ps .85
+set style line 4 lt 5 lc rgb "#6131FA" lw 2 dt 1 pt 6 ps .85
+set style line 5 lt 5 lc rgb "#22DFE3" lw 2 dt 5 pt 5 ps .85
+set style line 6 lt 5 lc rgb "#6DFB26" lw 2 dt 4 pt 9 ps .85
+
+
+
+
+#set style rect back fs border lc rgb '#22008800'
+#set obj  1 rect from -0.5,-0.5 to 4.5,1.5   fs solid  fc rgb "#EEbbbbbb" front
+#set obj  2 rect from 4.5,-0.5 to 8.5,1.5   fs solid fc rgb "#EEaa11bb" front
+#set obj  3 rect from 8.5,-0.5 to 12.5,1.5   fs solid fc rgb "#EE1122bb" front
+#set obj  4 rect from 12.5,-0.5 to 16.5,1.5   fs solid fc rgb "#EEcccc22" front
+#set obj  5 rect from 16.5,-0.5 to 20.5,1.5   fs solid fc rgb "#EE1255dd" front
+
+set multiplot layout 6,1 \
+              margins 0.15,0.98,0.2,0.98 \
+              spacing 0.08,0.0
+
+
+
+
+
+# --- GRAPH F1
+set ytics 1
+
+@NOYTICS
+
+set label 1 '{/Helvetica F@_{{/*0.05 &{c}}1}^{/Helvetica {/*0.1 &{c}}Bin-DANN}} / {/Helvetica F@_{{/*0.05 &{c}}1}^{/Helvetica {/*0.1 &{c}}SAE}}' @POS 
+plot "data_pre.txt" using 1:2 with linespoint ls 1
+
+set ytics 1
+
+
+# --- GRAPH Pearson
+@NOYTICS
+set label 1 "{/:Italic {/Symbol \\162}}_{S,T} ({/:Italic {/Symbol \\162}} = 0.895)" @POS
+plot "data_pre.txt" using 1:3 with linespoint ls 2
+
+
+# --- GRAPH KL (T-S)
+@NOYTICS
+set label 1 "KL_{T,S} ({/:Italic {/Symbol \\162}} = 0.879)" @POS
+plot 'data_pre.txt' using 1:5 with linespoint ls 3
+
+
+# --- GRAPH JS 
+@NOYTICS
+set label 1 "JS ({/:Italic {/Symbol \\162}} = 0.876)" @POS
+plot 'data_pre.txt' using 1:6 with linespoint ls 4
+
+
+
+# --- GRAPH KL (S-T)
+@NOYTICS
+set label 1 "KL_{S,T} ({/:Italic {/Symbol \\162}} = 0.831)" @POS
+plot 'data_pre.txt' using 1:4 with linespoint ls 5
+
+
+# --- GRAPH Histogram intersection
+set xtics (sal_phi_label 1, \
+            dib_phi_label 2, \
+            sal_dib_label 3, \
+            phi_dib_label 4, \
+            phi_sal_label 5, \
+            dib_sal_label 6) \
+            rotate by 45 right;\
+          set xlabel 'x'
+@NOYTICS
+set label 1 "HI ({/:Italic {/Symbol \\162}} = 0.793)" @POS
+plot 'data_pre.txt' using 1:7 with linespoint ls 6
+
+unset multiplot
+### End multiplot
+
+
+

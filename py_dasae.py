@@ -53,6 +53,9 @@ def menu():
     parser = argparse.ArgumentParser(description='DA SAE')
     parser.add_argument('-type',   default='dann', type=str,     choices=['dann', 'cnn', 'autodann'],  help='Training type')
 
+    parser.add_argument('-corrtype',   default='pearson', type=str,     choices=['pearson', 'kl-nats', 'kl-bits', 'js-nats', 'js-bits', 'hist-intersection'],  help='Correlation type')
+    parser.add_argument('-corrth',   default=0.25,        dest='corr_th',          type=float, help='Correlation threshold')
+
     parser.add_argument('-path',  required=True,   help='base path to datasets')
     parser.add_argument('-db1',       required=True,  choices=utilConst.ARRAY_DBS, help='Database name')
     parser.add_argument('-db2',       required=True,  choices=utilConst.ARRAY_DBS, help='Database name')
@@ -67,6 +70,7 @@ def menu():
     parser.add_argument('-f',          default=64,      dest='nb_filters',   type=int,   help='nb_filters')
     parser.add_argument('-k',          default=5,        dest='k_size',            type=int,   help='kernel size')
     parser.add_argument('-drop',   default=0,        dest='dropout',          type=float, help='dropout value')
+    
 
     parser.add_argument('-lda',      default=0.001,    type=float,    help='Reversal gradient lambda')
     parser.add_argument('-lda_inc',  default=0.001,    type=float,    help='Reversal gradient lambda increment per epoch')
@@ -127,7 +131,7 @@ def load_data(path, db, window, step, page_size, is_test, truncate, with_filter)
     num_decimal = 1
 
     histogram_source_cnn = None
-    threshold_correl_pearson = None
+    threshold_correl = None
     model_cnn = None
     
     input_shape = (config.window, config.window, 1)
@@ -140,7 +144,7 @@ def load_data(path, db, window, step, page_size, is_test, truncate, with_filter)
 
             _, source_test_folds = utilIO.load_folds_names(config.db1)
             histogram_source_cnn = utilIO.getHistogramDomain(source_test_folds, model_cnn.label_model, config, num_decimal)
-            threshold_correl_pearson = 0.25
+            threshold_correl = config.corr_th
 
         
     x_test, y_test = utilDataGenerator.generate_chunks(
@@ -150,7 +154,7 @@ def load_data(path, db, window, step, page_size, is_test, truncate, with_filter)
                                 False, #with_filter, 
                                 histogram_source_cnn, 
                                 model_cnn,
-                                threshold_correl_pearson,
+                                threshold_correl,
                                 num_decimal,
                                 config)
 
@@ -161,7 +165,7 @@ def load_data(path, db, window, step, page_size, is_test, truncate, with_filter)
                                 with_filter, 
                                 histogram_source_cnn, 
                                 model_cnn,
-                                threshold_correl_pearson,
+                                threshold_correl,
                                 num_decimal,
                                 config)
         train_data_generator.shuffle()
@@ -201,7 +205,7 @@ def train_and_evaluate(datasets, input_shape, config):
             utilDANN.train_dann(dann, datasets['source'], datasets['target'],
                                                         weights_filename_dann, model_cnn,
                                                         histogram_source_cnn,
-                                                        0.25, #threshold_correl_pearson,
+                                                        config.corr_th,
                                                         utilConst.LOGS_DANN_FOLDERNAME,
                                                         utilConst.CSV_LOGS_DANN_FOLDERNAME,
                                                         config)
@@ -247,14 +251,21 @@ def train_and_evaluate(datasets, input_shape, config):
         pred_source = dann.label_model.predict(datasets['source']['x_test'], batch_size=batch, verbose=0)
         pred_target = dann.label_model.predict(datasets['target']['x_test'], batch_size=batch, verbose=0)
         print('SOURCE:')
-        source_best_fm, source_best_th = utilMetrics.calculate_best_fm(pred_source, datasets['source']['y_test'])
+        source_best_fm, source_best_th, source_precision, source_recall = utilMetrics.calculate_best_fm(pred_source, datasets['source']['y_test'])
         print('TARGET:')
-        target_best_fm, target_best_th = utilMetrics.calculate_best_fm(pred_target, datasets['target']['y_test'], source_best_th)
+        target_best_fm, target_best_th, target_precision, target_recall = utilMetrics.calculate_best_fm(pred_target, datasets['target']['y_test'], source_best_th)
 
         config.modelpath = weights_filename_dann
         _, target_test_folds = utilIO.load_folds_names(config.db2)
         utilIO.getHistograms(dann.label_model, target_test_folds, config, source_best_th, 1)
 
+        print('*'*80)
+        print ("SUMMARY")
+        print('*'*80)
+        print('SOURCE:')
+        print ("F1:" + str(source_best_fm) + ";Th:" + str(source_best_th) + ";Prec:" + str(source_precision) + ";Rec:" + str(source_recall))
+        print('TARGET:')
+        print ("F1:" + str(target_best_fm) + ";Th:" + str(target_best_th) + ";Prec:" + str(target_precision) + ";Rec:" + str(target_recall))
         # Save output images
         if config.save:
             config.modelpath = weights_filename_dann
@@ -276,14 +287,14 @@ def train_and_evaluate(datasets, input_shape, config):
             pred_target_cnn = model_cnn.label_model.predict(datasets['target']['x_test'], batch_size=batch, verbose=0)
 
             print('SOURCE CNN:')
-            source_best_fm_cnn, source_best_th_cnn = utilMetrics.calculate_best_fm(pred_source_cnn, datasets['source']['y_test'])
+            source_best_fm_cnn, source_best_th_cnn, source_precision_cnn, source_recall_cnn = utilMetrics.calculate_best_fm(pred_source_cnn, datasets['source']['y_test'])
             print('TARGET CNN:')
-            target_best_fm_cnn, target_best_th_cnn = utilMetrics.calculate_best_fm(pred_target_cnn, datasets['target']['y_test'], source_best_th_cnn)
+            target_best_fm_cnn, target_best_th_cnn, target_precision_cnn, target_recall_cnn = utilMetrics.calculate_best_fm(pred_target_cnn, datasets['target']['y_test'], source_best_th_cnn)
 
             print('SOURCE DANN:')
-            source_best_fm_dann, source_best_th_dann = utilMetrics.calculate_best_fm(pred_source_dann, datasets['source']['y_test'])
+            source_best_fm_dann, source_best_th_dann, source_precision_dann, source_recall_dann = utilMetrics.calculate_best_fm(pred_source_dann, datasets['source']['y_test'])
             print('TARGET DANN:')
-            target_best_fm_dann, target_best_th_dann = utilMetrics.calculate_best_fm(pred_target_dann, datasets['target']['y_test'], source_best_th_dann)
+            target_best_fm_dann, target_best_th_dann, target_precision_dann, target_recall_dann = utilMetrics.calculate_best_fm(pred_target_dann, datasets['target']['y_test'], source_best_th_dann)
         
             str_results = str(source_best_fm_cnn) + "\n"
             str_results += str(source_best_th_cnn) + "\n"
@@ -325,6 +336,29 @@ def train_and_evaluate(datasets, input_shape, config):
         _, target_test_folds = utilIO.load_folds_names(config.db2)
         histogram_target_cnn = utilIO.getHistogramDomain(target_test_folds, model_cnn.label_model, config, 1)
 
+        normalized_list_histogram_source = utilIO.getNormalizedHistogram(histogram_source_cnn)
+        normalized_list_histogram_target = utilIO.getNormalizedHistogram(histogram_target_cnn)
+
+
+        print ("Normalized histograms...")
+        print("Source:")
+        print (normalized_list_histogram_source)
+        print("Target:")
+        print (normalized_list_histogram_target)
+
+        print ('*'*80)
+
+        print ("Correlations...SOURCE-SOURCE: " + str(config.db1) + "->" + str(config.db1))
+        utilIO.get_all_correlation_metrics(normalized_list_histogram_source, normalized_list_histogram_source)
+        print ("Correlations...SOURCE-TARGET: "+ str(config.db1) + "->" + str(config.db2))
+        utilIO.get_all_correlation_metrics(normalized_list_histogram_source, normalized_list_histogram_target)
+        print ("Correlations...TARGET-SOURCE: "+ str(config.db2) + "->" + str(config.db1))
+        utilIO.get_all_correlation_metrics(normalized_list_histogram_target, normalized_list_histogram_source)
+        
+        #ELIMINAR
+        #return
+
+
         config.modelpath = weights_filename_dann.replace("weights_dannCONV_", "auto_dann_")
 
         content_results_file = utilIO.readString(pathdir_results)
@@ -359,7 +393,7 @@ def train_and_evaluate(datasets, input_shape, config):
                         datasets['target']['y_test'],
                         source_best_th_cnn, 
                         source_best_th_dann,
-                        0.25, #threshold_correl_pearson, 
+                        config.corrtype, config.corr_th,
                         histogram_source_cnn,
                         1)
 
@@ -373,13 +407,13 @@ def train_and_evaluate(datasets, input_shape, config):
                         target_test_folds, 
                         source_best_th_cnn, 
                         source_best_th_dann, 
-                        0.25, #threshold_correl_pearson, 
+                        config.corrtype, config.corr_th,
                         histogram_source_cnn, 
                         histogram_target_cnn,
                         1)
         
-        target_best_fm_auto, _ = utilMetrics.calculate_best_fm(pred_target_auto, datasets['target']['y_test'] > 0.5, None)
-        target_best_fm_auto_ideal, _ = utilMetrics.calculate_best_fm(pred_target_auto_ideal, datasets['target']['y_test'] > 0.5, None)
+        target_best_fm_auto, _, target_precision_auto, target_recall_auto = utilMetrics.calculate_best_fm(pred_target_auto, datasets['target']['y_test'] > 0.5, None)
+        target_best_fm_auto_ideal, _, target_precision_auto_ideal, target_recall_auto_ideal = utilMetrics.calculate_best_fm(pred_target_auto_ideal, datasets['target']['y_test'] > 0.5, None)
         
         print("------------------------------------------------------------")
         print('SAMPLE-LEVEL F1 SAE\tDANN\tAutoDANN\tIDEAL:')
@@ -387,6 +421,16 @@ def train_and_evaluate(datasets, input_shape, config):
                         + str(target_best_fm_dann).replace(".", ",") + "\t" 
                         + str(target_best_fm_auto).replace(".", ",") + "\t"
                         + str(target_best_fm_auto_ideal).replace(".", ","))
+        print("Precision:")
+        print (str(target_precision_cnn).replace(".", ",") + "\t" 
+                        + str(target_precision_dann).replace(".", ",") + "\t" 
+                        + str(target_precision_auto).replace(".", ",") + "\t"
+                        + str(target_precision_auto_ideal).replace(".", ","))
+        print("Recall:")
+        print (str(target_recall_cnn).replace(".", ",") + "\t" 
+                        + str(target_recall_dann).replace(".", ",") + "\t" 
+                        + str(target_recall_auto).replace(".", ",") + "\t"
+                        + str(target_recall_auto_ideal).replace(".", ","))
 
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
