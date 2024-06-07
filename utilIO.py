@@ -360,6 +360,27 @@ def getHistograms(model, array_files_to_save, config, threshold = 0.5, num_decim
     return list_histograms
         
 
+def getNormalizedHistogram(histogram):
+    print ("---------------------")
+    print (histogram)
+    values = getHistogramValuesSorted(histogram)
+    print(values)
+    total = np.sum(values)
+    values = [v/float(total) for v in values]
+    print (values)
+    print ("---------------------")
+    return values
+
+def getHistogramValuesSorted(histogram):
+    values = []
+    items_histogram = sorted(histogram.items())
+    
+    for prob, value in items_histogram:
+        values.append(value)    
+    return values
+
+
+
 def getHistogramBins(sample_image, num_decimal):
     tuple_sample = tuple(sample_image.reshape(1,-1)[0])
 
@@ -422,7 +443,7 @@ def getHistogramDomain(array_files, model, config, num_decimal=None):
             sample_prediction = prediction[0].reshape(config.window-4, config.window-4)
             finalImg[y+2:(y + config.window-2), x+2:(x + config.window-2)] = sample_prediction
            
-        histogram_domain_fname = getHistogramBins(finalImg, num_decimal)
+        histogram_domain_fname = getHistogram(finalImg, num_decimal)
         print(str(histogram_domain_fname))
 
         if histogram_domain is None:
@@ -513,7 +534,7 @@ def predictSAE(
         gt_inv = (gt <= 0.5)
 
         print ("SAE:")
-        target_best_fm_cnn, _ = utilMetrics.calculate_best_fm(finalImg_bin_cnn, gt, None)
+        target_best_fm_cnn, _, _, _ = utilMetrics.calculate_best_fm(finalImg_bin_cnn, gt, None)
         
         list_target_best_fm_cnn.append(target_best_fm_cnn)
 
@@ -546,6 +567,7 @@ def predictModelAtFullPage(
     array_files = load_array_of_files(config.path, array_files)
 
     list_target_best_fm = []
+    list_target_results = []
 
     for fname in array_files:
         print('Processing image', fname)
@@ -598,12 +620,13 @@ def predictModelAtFullPage(
         gt = (gt > 0.5)
 
         print ("F1 at sample-level:")
-        target_best_fm_cnn, _ = utilMetrics.calculate_best_fm(finalImg_bin, gt, None)
+        target_best_fm_cnn, _, target_precision_cnn, target_recall_cnn = utilMetrics.calculate_best_fm(finalImg_bin, gt, None)
         
         list_target_best_fm.append(target_best_fm_cnn)
+        list_target_results.append( (target_best_fm_cnn, target_precision_cnn, target_recall_cnn ))
 
     str_f1 = "F1 at page-level:\t"
-    str_f1 += str(list_target_best_fm)
+    str_f1 += str(list_target_results)
     
     avg_cnn = np.average(list_target_best_fm)
 
@@ -631,27 +654,66 @@ def log2(x):
 
 # calculate the kl divergence (measured in bits)
 def kl_divergence_bits(p, q):
-    cte = 0.0000001
+    cte = 0.01
     p2 = [p[i] + cte for i in range(len(p))]
     q2 = [q[i] + cte for i in range(len(q))]
     return sum([p2[i] * log2(p2[i]/q2[i]) for i in range(len(p2))])
 
 # calculate the kl divergence (measured in nats)
 def kl_divergence_nats(p, q):
-    cte = 0.0000001
+    cte = 0.01
     p2 = [p[i] + cte for i in range(len(p))]
     q2 = [q[i] + cte for i in range(len(q))]
-    return sum([p2[i] * log2(p2[i]/q2[i]) for i in range(len(p2))])
+    return sum([p2[i] * math.log(p2[i]/q2[i]) for i in range(len(p2))])
 
 # calculate the js divergence (measure in bits)
 def js_divergence_bits(p, q):
-    m = 0.5 * (p + q)
+    m = [0.5 * (p[i] + q[i]) for i in range(len(q))]
     return 0.5 * kl_divergence_bits(p, m) + 0.5 * kl_divergence_bits(q, m)
 
 # calculate the js divergence (measured in nats)
 def js_divergence_nats(p, q):
-    m = 0.5 * (p + q)
+    m = [0.5 * (p[i] + q[i]) for i in range(len(q))]
     return 0.5 * kl_divergence_nats(p, m) + 0.5 * kl_divergence_nats(q, m)
+
+
+def pearson_correlation(p, q):
+    return np.corrcoef(p, q)[0, 1]
+
+def get_correlation_metric(correlation_type, p, q):
+    if correlation_type == "pearson":
+        return pearson_correlation(p, q)
+    elif correlation_type == "kl-nats":
+        return kl_divergence_nats(p, q)
+    elif correlation_type == "js-nats":
+        return js_divergence_nats(p, q)
+    elif correlation_type == "kl-bits":
+        return kl_divergence_bits(p, q)
+    elif correlation_type == "js-bits":
+        return js_divergence_bits(p, q)
+    elif correlation_type == "hist-intersection":
+        return histogram_intersection(p, q)
+
+def get_all_correlation_metrics(p, q):
+    pearson = get_correlation_metric("pearson", p, q)
+    
+    kl_nats = get_correlation_metric("kl-nats", p, q)
+    kl_bits = get_correlation_metric("kl-bits", p, q)
+    
+    js_nats = get_correlation_metric("js-nats", p, q)
+    js_bits = get_correlation_metric("js-bits", p, q)
+
+    hist_inter = get_correlation_metric("hist-intersection", p, q)
+
+    print ("Pearson;KL (nats);KL (bits);JS (nats);JS (bits);Histogram intersection")
+    print (str(str(pearson) + ";"\
+            + str(kl_nats) + ";"\
+            + str(kl_bits) + ";"\
+            + str(js_nats) + ";"\
+            + str(js_bits) + ";"\
+            + str(hist_inter)).replace(".", ","))
+
+
 
 def predictAutoDANN_AtSampleLevel(
                         model_dann, 
@@ -661,7 +723,7 @@ def predictAutoDANN_AtSampleLevel(
                         y_test_samples,
                         source_best_th_cnn, 
                         source_best_th_dann,
-                        threshold_correl_pearson,
+                        correlation_type, threshold_correl,
                         histogram_source_cnn,
                         num_decimal):
     predicts_auto = []
@@ -697,12 +759,13 @@ def predictAutoDANN_AtSampleLevel(
 
         normalized_list_histogram_prediction_cnn = [number / float(number_pixels_target) for number in list_histogram_prediction_cnn]
 
-        correl_pearson = np.corrcoef(normalized_list_histogram_prediction_cnn, normalized_list_histogram_source_cnn)[0, 1]
+        correlation = get_correlation_metric(correlation_type, normalized_list_histogram_prediction_cnn, normalized_list_histogram_source_cnn)
+        #get_all_correlation_metrics(normalized_list_histogram_prediction_cnn, normalized_list_histogram_source_cnn)
 
         prediction_dann = model_dann.predict(list_x_test_sample_array)
         sample_prediction_dann = prediction_dann[0].reshape(config.window, config.window)
         
-        if correl_pearson > threshold_correl_pearson:
+        if correlation > threshold_correl:
             #SAE
             threshold = source_best_th_cnn
             sample_prediction = sample_prediction_cnn
@@ -731,8 +794,8 @@ def predictAutoDANN_AtSampleLevel(
         #print(y_test_sample.shape)
          
 
-        target_best_fm_cnn, _ = utilMetrics.calculate_best_fm(sample_prediction_cnn_th, y_test_sample > 0.5, None, False)
-        target_best_fm_dann, _ = utilMetrics.calculate_best_fm(sample_prediction_dann_th, y_test_sample > 0.5, None, False)
+        target_best_fm_cnn, _, target_precision_cnn, target_recall_cnn = utilMetrics.calculate_best_fm(sample_prediction_cnn_th, y_test_sample > 0.5, None, False)
+        target_best_fm_dann, _, target_precision_dann, target_recall_dann = utilMetrics.calculate_best_fm(sample_prediction_dann_th, y_test_sample > 0.5, None, False)
 
         if target_best_fm_cnn > target_best_fm_dann:
             best_sample_prediction_th = sample_prediction_cnn_th
@@ -768,7 +831,7 @@ def predictAUTODann(
                 array_files_to_save, 
                 threshold_cnn, 
                 threshold_dann, 
-                threshold_correl_pearson, 
+                correlation_type, threshold_correl, 
                 histogram_source_cnn, 
                 histogram_target_cnn,
                 num_decimal=None):
@@ -854,13 +917,14 @@ def predictAUTODann(
 
             normalized_list_histogram_prediction_cnn = [number / float(number_pixels_target) for number in list_histogram_prediction_cnn]
             
-            correl_pearson = np.corrcoef(normalized_list_histogram_prediction_cnn, normalized_list_histogram_source_cnn)[0, 1]
-            
+            correlation = get_correlation_metric(correlation_type, normalized_list_histogram_prediction_cnn, normalized_list_histogram_source_cnn)
+            #get_all_correlation_metrics(normalized_list_histogram_prediction_cnn, normalized_list_histogram_source_cnn)
+
             prediction_dann = model_dann.predict(roi)
             prediction_dann = prediction_dann[:,2:prediction_dann.shape[1]-2,2:prediction_dann.shape[2]-2,:]
             sample_prediction_dann = prediction_dann[0].reshape(config.window-4, config.window-4)
             
-            if correl_pearson > threshold_correl_pearson:
+            if correlation > threshold_correl:
                 #SAE
                 threshold = threshold_cnn
                 sample_prediction = sample_prediction_cnn
@@ -887,8 +951,8 @@ def predictAUTODann(
             sample_prediction_cnn_th = sample_prediction_cnn < threshold_cnn
             sample_prediction_dann_th = sample_prediction_dann < threshold_dann
 
-            target_best_fm_cnn, _ = utilMetrics.calculate_best_fm(sample_prediction_cnn_th, gt_sample > 0.5, None, False)
-            target_best_fm_dann, _ = utilMetrics.calculate_best_fm(sample_prediction_dann_th, gt_sample > 0.5, None, False)
+            target_best_fm_cnn, _, target_precision_cnn, target_recall_cnn = utilMetrics.calculate_best_fm(sample_prediction_cnn_th, gt_sample > 0.5, None, False)
+            target_best_fm_dann, _, target_precision_dann, target_recall_dann = utilMetrics.calculate_best_fm(sample_prediction_dann_th, gt_sample > 0.5, None, False)
 
             if target_best_fm_cnn > target_best_fm_dann:
                 best_sample_prediction_th = sample_prediction_cnn_th
@@ -961,32 +1025,39 @@ def predictAUTODann(
 
         print ("F1 at sample-level:")
 
-        target_best_fm_autodann, _ = utilMetrics.calculate_best_fm(finalImg_bin, gt, None)
+        target_best_fm_autodann, _, target_precision_autodann, target_recall_autodann = utilMetrics.calculate_best_fm(finalImg_bin, gt, None)
         print ("SAE:")
-        target_best_fm_cnn, _ = utilMetrics.calculate_best_fm(finalImg_bin_cnn, gt, None)
+        target_best_fm_cnn, _, target_precision_cnn, target_recall_cnn = utilMetrics.calculate_best_fm(finalImg_bin_cnn, gt, None)
         print ("DANN:")
-        target_best_fm_dann, _ = utilMetrics.calculate_best_fm(finalImg_bin_dann, gt, None)
+        target_best_fm_dann, _, target_precision_dann, target_recall_dann = utilMetrics.calculate_best_fm(finalImg_bin_dann, gt, None)
         print ("IDEAL:")
-        target_best_fm_ideal, _ = utilMetrics.calculate_best_fm(finalImg_bin_ideal, gt, None)
+        target_best_fm_ideal, _, target_precision_dann, target_recall_dann = utilMetrics.calculate_best_fm(finalImg_bin_ideal, gt, None)
 
         list_target_best_fm_autodann.append(target_best_fm_autodann)
+        list_target_results_autodann.append(( target_best_fm_autodann, target_precision_autodann, target_recall_autodann ))
+
         list_target_best_fm_cnn.append(target_best_fm_cnn)
+        list_target_results_cnn.append(( target_best_fm_cnn, target_precision_cnn, target_recall_cnn ))
+
         list_target_best_fm_dann.append(target_best_fm_dann)
+        list_target_results_dann.append(( target_best_fm_dann, target_precision_dann, target_recall_dann ))
+
         list_target_best_fm_ideal.append(target_best_fm_ideal)
+        list_target_results_ideal.append(( target_best_fm_ideal, target_precision_dann, target_recall_dann ))
 
     print ("F1 at page-level")
     
     str_f1 = "SAE:\t"
-    str_f1 += str(list_target_best_fm_cnn)
+    str_f1 += str(list_target_results_cnn)
     
     str_f1 += ("\nDANN:\t")
-    str_f1 += (str(list_target_best_fm_dann))
+    str_f1 += (str(list_target_results_dann))
     
     str_f1 +=  ("\nAUTODANN:\t")
-    str_f1 += (str(list_target_best_fm_autodann))
+    str_f1 += (str(list_target_results_autodann))
 
     str_f1 +=  ("\IDEAL:\t")
-    str_f1 += (str(list_target_best_fm_ideal))
+    str_f1 += (str(list_target_results_ideal))
     
     avg_cnn = np.average(list_target_best_fm_cnn)
     avg_dann = np.average(list_target_best_fm_dann)

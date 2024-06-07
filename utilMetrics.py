@@ -88,13 +88,21 @@ def run_test(y_pred, y_gt, threshold=.5):
 def calculate_best_fm(y_pred, y_test, args_th=-1, verbose=True):
     best_fm = -1
     best_th = -1
+    prec = 0.
+    recall = 0.
     if args_th is None:
         results = run_test(y_pred, y_test, threshold=args_th)
         best_fm = results['fm']
+        prec = results['precision']
+        recall = results['recall']
+
         best_th = args_th
         if verbose:
             print('Threshold:', best_th)
-            print('Fm: {:0.4f}'.format(best_fm))
+            print("Best Fm: %.4f " % best_fm, 
+                    "P: %.3f " % prec,
+                    "R: %.3f " % recall)
+
     elif args_th == -1:
         for i in range(11):
             th = float(i) / 10.0
@@ -104,19 +112,26 @@ def calculate_best_fm(y_pred, y_test, args_th=-1, verbose=True):
             if fm > best_fm:
                 best_fm = fm
                 best_th = th
+                prec = results['precision']
+                recall = results['recall']
         if verbose:
             print('Best threshold:', best_th)
-            print('Best Fm: {:0.4f}'.format(best_fm))
-
+            print("Best Fm: %.4f " % best_fm, 
+                    "P: %.3f " % prec,
+                    "R: %.3f " % recall)
     else:
         results = run_test(y_pred, y_test, threshold=args_th)
         best_fm = results['fm']
         best_th = args_th
+        prec = results['precision']
+        recall = results['recall']
         if verbose:
             print('Threshold:', best_th)
-            print('Fm: {:0.4f}'.format(best_fm))
+            print("Fm: %.4f " % best_fm, 
+                    "P: %.3f " % prec,
+                    "R: %.3f " % recall)
 
-    return best_fm, best_th
+    return best_fm, best_th, prec, recall
 
 
 """
