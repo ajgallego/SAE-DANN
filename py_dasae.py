@@ -259,6 +259,13 @@ def train_and_evaluate(datasets, input_shape, config):
         _, target_test_folds = utilIO.load_folds_names(config.db2)
         utilIO.getHistograms(dann.label_model, target_test_folds, config, source_best_th, 1)
 
+        print('*'*80)
+        print ("SUMMARY")
+        print('*'*80)
+        print('SOURCE:')
+        print ("F1:" + str(source_best_fm) + ";Th:" + str(source_best_th) + ";Prec:" + str(source_precision) + ";Rec:" + str(source_recall))
+        print('TARGET:')
+        print ("F1:" + str(target_best_fm) + ";Th:" + str(target_best_th) + ";Prec:" + str(target_precision) + ";Rec:" + str(target_recall))
         # Save output images
         if config.save:
             config.modelpath = weights_filename_dann
@@ -348,9 +355,6 @@ def train_and_evaluate(datasets, input_shape, config):
         print ("Correlations...TARGET-SOURCE: "+ str(config.db2) + "->" + str(config.db1))
         utilIO.get_all_correlation_metrics(normalized_list_histogram_target, normalized_list_histogram_source)
         
-        #ELIMINAR
-        return
-
 
         config.modelpath = weights_filename_dann.replace("weights_dannCONV_", "auto_dann_")
 

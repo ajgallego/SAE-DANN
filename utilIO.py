@@ -856,6 +856,7 @@ def predictAUTODann(
     array_files = load_array_of_files(config.path, array_files_to_save)
 
     list_target_best_fm_autodann = []
+    list_target_results_autodann = []
     list_target_best_fm_cnn = []
     list_target_best_fm_dann = []
     list_target_best_fm_ideal = []

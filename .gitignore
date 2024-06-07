@@ -1,6 +1,6 @@
 .vscode/*
-CSV_LOGS_DANN
-CSV_LOGS_CNN
+CSV_LOGS_*
+plots
 bucles
 BACKUP
 OUTPUT
@@ -18,13 +18,4 @@ plots
 *.out
 *.pyc
 *~
-sh_run_experiment_bs_local.sh
-sh_run_experiment_local.sh
-sh_run_experiment_test_local.sh
-sh_run_experiment_local_2.sh
-sh_run_experiment_local_2_cnn.sh
-sh_run_experiment_local_3.sh
-sh_run_experiment_local_4.sh
-sh_run_experiment_local_5.sh
-sh_run_experiment_local_cnn.sh
-sh_run_test_experiment_local_3.sh
+sh_run_*
