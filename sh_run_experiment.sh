@@ -5,7 +5,6 @@
 #exit
 
 gpu=0
-
 type=cnn			# dann cnn
 source="sal"			# 'dibco2016','dibco2014','palm0','palm1','phi','ein','sal','voy','bdi','all'
 target="dibco2016"  
@@ -17,13 +16,11 @@ kernel=3			# 3 5
 drop=0.2			# 0
 e=300					# 300
 b=12   				# 64 128 256
-page=2
-lda=0.01			# 0.01  0.001	0.0001	0.00001
-lda_inc=0.001		#increment of lambda in each epoch
+page=-1
 #lr=0.5				# 0.5  1.0
 grl_pos=0
 domain_model=2
-options="--test"			#--test  --truncate --save
+options=""			#--test  --truncate --save
 
 options_serial=${options// /.}
 options_serial=${options_serial////-}
@@ -31,10 +28,10 @@ options_serial=${options_serial////-}
 #"sal" "dibco2016" "dibco2014" "palm0" "palm1" "phi" "ein"
 
 
-for lda in 0.01; do
-    for source in "palm1" ; do #"sal" "dibco2016" "palm1" "phi"
-        for target in "sal" "ein" "dibco2014" "dibco2016" "palm0" "palm1" "phi"; do #"sal" "dibco2016" "palm1" "phi"
-            for lda_inc in 0.1; do
+for lda in 0.1; do
+    for source in "dibco2016" ; do #"sal" "ein" "dibco2014" "dibco2016" "palm0" "palm1" "phi"
+        for target in "sal"; do #"sal" "ein" "dibco2014" "dibco2016" "palm0" "palm1" "phi"
+            for lda_inc in 0.01; do
                 #target=${source}
 
                 #if [ $source == $target ]; then
